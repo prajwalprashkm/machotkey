@@ -1,0 +1,130 @@
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/unsafe_function.hpp:31:
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:110:31: error: address of overloaded function 'call' does not match required type 'int (lua_State *)'
+  110 |                                 lua_CFunction freefunc = &function_detail::upvalue_this_member_variable<C, Fx>::template call<is_yielding, no_trampoline>;
+      |                                                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:268:5: note: in instantiation of function template specialization 'sol::function_detail::select_member_variable<false, false, unsigned int LuaDisplay::*>' requested here
+  268 |                                 select_member_variable<is_yielding, no_trampoline>(L, std::forward<Fx>(fx), std::forward<Args>(args)...);
+      |                                 ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:392:22: note: in instantiation of function template specialization 'sol::function_detail::select<false, false, unsigned int LuaDisplay::*>' requested here
+  392 |                                 function_detail::select<false, false>(L, std::forward<Args>(args)...);
+      |                                                  ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_core.hpp:878:14: note: in instantiation of function template specialization 'sol::stack::unqualified_pusher<unsigned int LuaDisplay::*>::push<unsigned int LuaDisplay::*>' requested here
+  878 |                                 return p.push(L, std::forward<T>(t), std::forward<Args>(args)...);
+      |                                          ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_field.hpp:222:7: note: in instantiation of function template specialization 'sol::stack::push<unsigned int LuaDisplay::*>' requested here
+  222 |                                                 push(L, std::forward<Value>(value));
+      |                                                 ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_core.hpp:1250:59: note: in instantiation of function template specialization 'sol::stack::field_setter<char[3]>::set<const char (&)[3], unsigned int LuaDisplay::*>' requested here
+ 1250 |                         field_setter<meta::unqualified_t<Key>, global, raw> {}.set(L, std::forward<Key>(key), std::forward<Value>(value), tableindex);
+      |                                                                                ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/table_core.hpp:264:14: note: (skipping 3 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+  264 |                                                 stack::set_field<global, raw>(L, std::forward<Key>(key), std::forward<Keys>(keys)..., table_index);
+      |                                                        ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/usertype.hpp:100:20: note: in instantiation of function template specialization 'sol::basic_table_core<false, sol::basic_reference<false>>::set<const char (&)[3], unsigned int LuaDisplay::*>' requested here
+  100 |                                         table_base_t::set(std::forward<Key>(key), std::forward<Value>(value));
+      |                                                       ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/usertype.hpp:50:38: note: in instantiation of function template specialization 'sol::basic_usertype<LuaDisplay, sol::basic_reference<false>>::set<const char (&)[3], unsigned int LuaDisplay::*>' requested here
+   50 |                         (void)detail::swallow { 0, (this->set(std::get<I * 2>(std::move(args)), std::get<I * 2 + 1>(std::move(args))), 0)... };
+      |                                                           ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/table.hpp:78:7: note: in instantiation of function template specialization 'sol::basic_usertype<LuaDisplay, sol::basic_reference<false>>::tuple_set<0UL, 1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL, const char (&)[3], unsigned int LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[6], double LuaDisplay::*&&, const char (&)[13], double LuaDisplay::*&&, const char (&)[8], bool LuaDisplay::*&&>' requested here
+   78 |                         ut.tuple_set(std::make_index_sequence<(sizeof...(Args) + 1) / 2>(), std::forward_as_tuple(std::forward<Arg>(arg), std::forward<Args>(args)...));
+      |                            ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/state_view.hpp:785:18: note: in instantiation of function template specialization 'sol::basic_table_core<true, sol::basic_reference<false>>::new_usertype<LuaDisplay, const char (&)[8], const char (&)[3], unsigned int LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[6], double LuaDisplay::*, const char (&)[13], double LuaDisplay::*, const char (&)[8], bool LuaDisplay::*, void>' requested here
+  785 |                         return global.new_usertype<Class>(std::forward<Args>(args)...);
+      |                                       ^
+/Users/idk/machotkey/project/src/lua/screen_bridge.h:271:13: note: in instantiation of function template specialization 'sol::state_view::new_usertype<LuaDisplay, const char (&)[8], const char (&)[3], unsigned int LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[6], double LuaDisplay::*, const char (&)[13], double LuaDisplay::*, const char (&)[8], bool LuaDisplay::*>' requested here
+  271 |         lua.new_usertype<LuaDisplay>("Display",
+      |             ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types_stateless.hpp:323:14: note: candidate template ignored: substitution failure [with is_yielding = false, no_trampoline = false]
+  323 |                 static int call(lua_State* L) noexcept(std::is_nothrow_copy_assignable_v<T>) {
+      |                            ^
+In file included from /Users/idk/machotkey/project/src/macro_runner.cpp:7:
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/sol.hpp:54:
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/function.hpp:28:
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/unsafe_function.hpp:31:
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:110:31: error: address of overloaded function 'call' does not match required type 'int (lua_State *)'
+  110 |                                 lua_CFunction freefunc = &function_detail::upvalue_this_member_variable<C, Fx>::template call<is_yielding, no_trampoline>;
+      |                                                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:268:5: note: in instantiation of function template specialization 'sol::function_detail::select_member_variable<false, false, double LuaDisplay::*>' requested here
+  268 |                                 select_member_variable<is_yielding, no_trampoline>(L, std::forward<Fx>(fx), std::forward<Args>(args)...);
+      |                                 ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:392:22: note: in instantiation of function template specialization 'sol::function_detail::select<false, false, double LuaDisplay::*>' requested here
+  392 |                                 function_detail::select<false, false>(L, std::forward<Args>(args)...);
+      |                                                  ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_core.hpp:878:14: note: in instantiation of function template specialization 'sol::stack::unqualified_pusher<double LuaDisplay::*>::push<double LuaDisplay::*>' requested here
+  878 |                                 return p.push(L, std::forward<T>(t), std::forward<Args>(args)...);
+      |                                          ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_field.hpp:222:7: note: in instantiation of function template specialization 'sol::stack::push<double LuaDisplay::*>' requested here
+  222 |                                                 push(L, std::forward<Value>(value));
+      |                                                 ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_core.hpp:1250:59: note: in instantiation of function template specialization 'sol::stack::field_setter<char[2]>::set<const char (&)[2], double LuaDisplay::*>' requested here
+ 1250 |                         field_setter<meta::unqualified_t<Key>, global, raw> {}.set(L, std::forward<Key>(key), std::forward<Value>(value), tableindex);
+      |                                                                                ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/table_core.hpp:264:14: note: (skipping 3 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+  264 |                                                 stack::set_field<global, raw>(L, std::forward<Key>(key), std::forward<Keys>(keys)..., table_index);
+      |                                                        ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/usertype.hpp:100:20: note: in instantiation of function template specialization 'sol::basic_table_core<false, sol::basic_reference<false>>::set<const char (&)[2], double LuaDisplay::*>' requested here
+  100 |                                         table_base_t::set(std::forward<Key>(key), std::forward<Value>(value));
+      |                                                       ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/usertype.hpp:50:38: note: in instantiation of function template specialization 'sol::basic_usertype<LuaDisplay, sol::basic_reference<false>>::set<const char (&)[2], double LuaDisplay::*>' requested here
+   50 |                         (void)detail::swallow { 0, (this->set(std::get<I * 2>(std::move(args)), std::get<I * 2 + 1>(std::move(args))), 0)... };
+      |                                                           ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/table.hpp:78:7: note: in instantiation of function template specialization 'sol::basic_usertype<LuaDisplay, sol::basic_reference<false>>::tuple_set<0UL, 1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL, const char (&)[3], unsigned int LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[6], double LuaDisplay::*&&, const char (&)[13], double LuaDisplay::*&&, const char (&)[8], bool LuaDisplay::*&&>' requested here
+   78 |                         ut.tuple_set(std::make_index_sequence<(sizeof...(Args) + 1) / 2>(), std::forward_as_tuple(std::forward<Arg>(arg), std::forward<Args>(args)...));
+      |                            ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/state_view.hpp:785:18: note: in instantiation of function template specialization 'sol::basic_table_core<true, sol::basic_reference<false>>::new_usertype<LuaDisplay, const char (&)[8], const char (&)[3], unsigned int LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[6], double LuaDisplay::*, const char (&)[13], double LuaDisplay::*, const char (&)[8], bool LuaDisplay::*, void>' requested here
+  785 |                         return global.new_usertype<Class>(std::forward<Args>(args)...);
+      |                                       ^
+/Users/idk/machotkey/project/src/lua/screen_bridge.h:271:13: note: in instantiation of function template specialization 'sol::state_view::new_usertype<LuaDisplay, const char (&)[8], const char (&)[3], unsigned int LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[6], double LuaDisplay::*, const char (&)[13], double LuaDisplay::*, const char (&)[8], bool LuaDisplay::*>' requested here
+  271 |         lua.new_usertype<LuaDisplay>("Display",
+      |             ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types_stateless.hpp:323:14: note: candidate template ignored: substitution failure [with is_yielding = false, no_trampoline = false]
+  323 |                 static int call(lua_State* L) noexcept(std::is_nothrow_copy_assignable_v<T>) {
+      |                            ^
+In file included from /Users/idk/machotkey/project/src/macro_runner.cpp:7:
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/sol.hpp:54:
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/function.hpp:28:
+In file included from /Users/idk/machotkey/project/libs/sol2/include/sol/unsafe_function.hpp:31:
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:110:31: error: address of overloaded function 'call' does not match required type 'int (lua_State *)'
+  110 |                                 lua_CFunction freefunc = &function_detail::upvalue_this_member_variable<C, Fx>::template call<is_yielding, no_trampoline>;
+      |                                                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:268:5: note: in instantiation of function template specialization 'sol::function_detail::select_member_variable<false, false, bool LuaDisplay::*>' requested here
+  268 |                                 select_member_variable<is_yielding, no_trampoline>(L, std::forward<Fx>(fx), std::forward<Args>(args)...);
+      |                                 ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types.hpp:392:22: note: in instantiation of function template specialization 'sol::function_detail::select<false, false, bool LuaDisplay::*>' requested here
+  392 |                                 function_detail::select<false, false>(L, std::forward<Args>(args)...);
+      |                                                  ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_core.hpp:878:14: note: in instantiation of function template specialization 'sol::stack::unqualified_pusher<bool LuaDisplay::*>::push<bool LuaDisplay::*>' requested here
+  878 |                                 return p.push(L, std::forward<T>(t), std::forward<Args>(args)...);
+      |                                          ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_field.hpp:222:7: note: in instantiation of function template specialization 'sol::stack::push<bool LuaDisplay::*>' requested here
+  222 |                                                 push(L, std::forward<Value>(value));
+      |                                                 ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/stack_core.hpp:1250:59: note: in instantiation of function template specialization 'sol::stack::field_setter<char[8]>::set<const char (&)[8], bool LuaDisplay::*>' requested here
+ 1250 |                         field_setter<meta::unqualified_t<Key>, global, raw> {}.set(L, std::forward<Key>(key), std::forward<Value>(value), tableindex);
+      |                                                                                ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/table_core.hpp:264:14: note: (skipping 3 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+  264 |                                                 stack::set_field<global, raw>(L, std::forward<Key>(key), std::forward<Keys>(keys)..., table_index);
+      |                                                        ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/usertype.hpp:100:20: note: in instantiation of function template specialization 'sol::basic_table_core<false, sol::basic_reference<false>>::set<const char (&)[8], bool LuaDisplay::*>' requested here
+  100 |                                         table_base_t::set(std::forward<Key>(key), std::forward<Value>(value));
+      |                                                       ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/usertype.hpp:50:38: note: in instantiation of function template specialization 'sol::basic_usertype<LuaDisplay, sol::basic_reference<false>>::set<const char (&)[8], bool LuaDisplay::*>' requested here
+   50 |                         (void)detail::swallow { 0, (this->set(std::get<I * 2>(std::move(args)), std::get<I * 2 + 1>(std::move(args))), 0)... };
+      |                                                           ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/table.hpp:78:7: note: in instantiation of function template specialization 'sol::basic_usertype<LuaDisplay, sol::basic_reference<false>>::tuple_set<0UL, 1UL, 2UL, 3UL, 4UL, 5UL, 6UL, 7UL, const char (&)[3], unsigned int LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[2], double LuaDisplay::*&&, const char (&)[6], double LuaDisplay::*&&, const char (&)[13], double LuaDisplay::*&&, const char (&)[8], bool LuaDisplay::*&&>' requested here
+   78 |                         ut.tuple_set(std::make_index_sequence<(sizeof...(Args) + 1) / 2>(), std::forward_as_tuple(std::forward<Arg>(arg), std::forward<Args>(args)...));
+      |                            ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/state_view.hpp:785:18: note: in instantiation of function template specialization 'sol::basic_table_core<true, sol::basic_reference<false>>::new_usertype<LuaDisplay, const char (&)[8], const char (&)[3], unsigned int LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[6], double LuaDisplay::*, const char (&)[13], double LuaDisplay::*, const char (&)[8], bool LuaDisplay::*, void>' requested here
+  785 |                         return global.new_usertype<Class>(std::forward<Args>(args)...);
+      |                                       ^
+/Users/idk/machotkey/project/src/lua/screen_bridge.h:271:13: note: in instantiation of function template specialization 'sol::state_view::new_usertype<LuaDisplay, const char (&)[8], const char (&)[3], unsigned int LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[2], double LuaDisplay::*, const char (&)[6], double LuaDisplay::*, const char (&)[13], double LuaDisplay::*, const char (&)[8], bool LuaDisplay::*>' requested here
+  271 |         lua.new_usertype<LuaDisplay>("Display",
+      |             ^
+/Users/idk/machotkey/project/libs/sol2/include/sol/function_types_stateless.hpp:323:14: note: candidate template ignored: substitution failure [with is_yielding = false, no_trampoline = false]
+  323 |                 static int call(lua_State* L) noexcept(std::is_nothrow_copy_assignable_v<T>) {
+      |                            ^
+2 warnings and 3 errors generated.
+make[2]: *** [CMakeFiles/macro_runner.dir/project/src/macro_runner.cpp.o] Error 1
+make[1]: *** [CMakeFiles/macro_runner.dir/all] Error 2
+make: *** [all] Error 2
