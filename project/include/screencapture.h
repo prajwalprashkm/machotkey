@@ -2,6 +2,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
+#include <vector>
 #include <CoreGraphics/CoreGraphics.h>
 
 // Forward declare CoreVideo type (no Objective-C needed in header)
@@ -51,3 +52,4 @@ private:
 };
 
 void disable_app_nap();
+void set_screen_capture_excluded_window_ids(const std::vector<uint32_t>& window_ids);

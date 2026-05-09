@@ -38,3 +38,5 @@ imgui.ini
 vscode_api_def/
 .vscode/
 macro_project/
+
+project/ui/

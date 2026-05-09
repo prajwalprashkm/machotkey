@@ -187,6 +187,7 @@ public:
     void hide();
     void set_opacity(float alpha);
     void bring_to_front(bool key);
+    uint32_t get_native_window_number() const;
 
     std::atomic<bool> ready{false};
     bool is_ready(){ return ready.load(); };
@@ -536,6 +537,10 @@ void WebViewWindow::set_opacity(float alpha) {
 
 void WebViewWindow::bring_to_front(bool key) {
     static_cast<WebViewWindowImpl*>(impl)->bring_to_front(key);
+}
+
+uint32_t WebViewWindow::get_native_window_number() const {
+    return static_cast<WebViewWindowImpl*>(impl)->get_native_window_number();
 }
 
 bool WebViewWindow::is_ready() {
@@ -1118,6 +1123,20 @@ void WebViewWindowImpl::bring_to_front(bool key) {
             [window orderFront:nil];
         }
     });
+}
+
+uint32_t WebViewWindowImpl::get_native_window_number() const {
+    __block uint32_t window_number = 0;
+    void (^read_block)(void) = ^{
+        if (!window) return;
+        window_number = static_cast<uint32_t>([window windowNumber]);
+    };
+    if ([NSThread isMainThread]) {
+        read_block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), read_block);
+    }
+    return window_number;
 }
 
 //

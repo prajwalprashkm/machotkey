@@ -31,6 +31,7 @@
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>
+#include <ApplicationServices/ApplicationServices.h>
 #include "input_interface.h"
 #include "screencapture.h"
 #include "color_search.h"
@@ -1107,6 +1108,145 @@ std::string permission_display_name(const std::string& key) {
     return key;
 }
 
+CGEventRef listener_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void* refcon);
+
+bool is_permission_granted(const std::unordered_map<std::string, bool>& grants, const char* key) {
+    auto it = grants.find(key);
+    return it != grants.end() && it->second;
+}
+
+bool can_create_keyboard_event_tap_probe() {
+    const CGEventMask event_mask = CGEventMaskBit(kCGEventKeyDown) |
+                                   CGEventMaskBit(kCGEventKeyUp) |
+                                   CGEventMaskBit(kCGEventFlagsChanged);
+
+    CFMachPortRef tap = CGEventTapCreate(
+        kCGHIDEventTap,
+        kCGHeadInsertEventTap,
+        kCGEventTapOptionListenOnly,
+        event_mask,
+        listener_callback,
+        NULL
+    );
+
+    if (!tap) {
+        return false;
+    }
+    CFRelease(tap);
+    return true;
+}
+
+bool request_screen_capture_permission() {
+    if (CGPreflightScreenCaptureAccess()) {
+        return true;
+    }
+    if (CGRequestScreenCaptureAccess()) {
+        return true;
+    }
+    return CGPreflightScreenCaptureAccess();
+}
+
+bool request_accessibility_permission() {
+    const void* keys[] = { kAXTrustedCheckOptionPrompt };
+    const void* values[] = { kCFBooleanTrue };
+    CFDictionaryRef options = CFDictionaryCreate(
+        kCFAllocatorDefault,
+        keys,
+        values,
+        1,
+        &kCFCopyStringDictionaryKeyCallBacks,
+        &kCFTypeDictionaryValueCallBacks
+    );
+    const bool trusted = AXIsProcessTrustedWithOptions(options);
+    if (options) {
+        CFRelease(options);
+    }
+    return trusted;
+}
+
+bool request_input_monitoring_permission() {
+    if (CGPreflightListenEventAccess()) {
+        return true;
+    }
+    if (CGRequestListenEventAccess()) {
+        return true;
+    }
+    return CGPreflightListenEventAccess();
+}
+
+bool ensure_app_level_system_permissions(const std::string& macro_name, const std::unordered_map<std::string, bool>& grants, std::string& error_out) {
+    if (is_permission_granted(grants, "screen_capture")) {
+        if (!CGPreflightScreenCaptureAccess()) {
+            const bool proceed = show_system_permission_dialog(
+                "Screen Recording Permission Required",
+                "The macro '" + macro_name + "' requires screen capture. Continue to open the native macOS permission prompt."
+            );
+            if (!proceed) {
+                error_out = "permission request canceled: Screen Recording";
+                return false;
+            }
+            if (!request_screen_capture_permission()) {
+                error_out = "missing app-level permission: Screen Recording";
+                return false;
+            }
+        }
+    }
+
+    if (is_permission_granted(grants, "keyboard_listen")) {
+        if (!CGPreflightListenEventAccess()) {
+            const bool proceed = show_system_permission_dialog(
+                "Keyboard Monitoring Permission Required",
+                "The macro '" + macro_name + "' listens for keyboard events. Continue to open the native macOS keyboard monitoring prompt."
+            );
+            if (!proceed) {
+                error_out = "permission request canceled: Accessibility/Keyboard Monitoring";
+                return false;
+            }
+            if (!request_input_monitoring_permission()) {
+                error_out = "missing app-level permission: Keyboard Monitoring";
+                return false;
+            }
+        }
+
+        if (!can_create_keyboard_event_tap_probe()) {
+            const bool proceed = show_system_permission_dialog(
+                "Accessibility Permission Required",
+                "The macro '" + macro_name + "' needs keyboard event tap access. Continue to open the native macOS accessibility prompt."
+            );
+            if (!proceed) {
+                error_out = "permission request canceled: Accessibility";
+                return false;
+            }
+            request_accessibility_permission();
+            if (!can_create_keyboard_event_tap_probe()) {
+                error_out = "missing app-level permission: Accessibility/Keyboard Monitoring";
+                return false;
+            }
+        }
+    }
+
+    const bool needs_input_control_permission =
+        is_permission_granted(grants, "keyboard_control") ||
+        is_permission_granted(grants, "mouse_control");
+    if (needs_input_control_permission && !AXIsProcessTrusted()) {
+        const bool proceed = show_system_permission_dialog(
+            "Input Control Permission Required",
+            "The macro '" + macro_name + "' sends keyboard and/or mouse input. Continue to open the native macOS accessibility prompt."
+        );
+        if (!proceed) {
+            error_out = "permission request canceled: Accessibility/Input Control";
+            return false;
+        }
+        request_accessibility_permission();
+        if (!AXIsProcessTrusted()) {
+            error_out = "missing app-level permission: Accessibility/Input Control";
+            return false;
+        }
+    }
+
+    return true;
+}
+
 std::optional<std::unordered_map<std::string, bool>> prompt_for_permissions(const std::string& macro_name, const ProjectManifest& manifest) {
     std::unordered_map<std::string, bool> grants;
     for (const auto& permission : collect_manifest_permissions(manifest)) {
@@ -1358,6 +1498,19 @@ void send_runner_throttle_clear() {
     write(w, &header, sizeof(header));
 }
 
+void refresh_screen_capture_excluded_windows() {
+    std::vector<uint32_t> excluded_window_ids;
+    if (overlay) {
+        const uint32_t overlay_id = overlay->get_native_window_number();
+        if (overlay_id != 0) excluded_window_ids.push_back(overlay_id);
+    }
+    if (main_win) {
+        const uint32_t main_window_id = main_win->get_native_window_number();
+        if (main_window_id != 0) excluded_window_ids.push_back(main_window_id);
+    }
+    set_screen_capture_excluded_window_ids(excluded_window_ids);
+}
+
 void apply_headless_mode(bool enabled) {
     headless_mode_enabled.store(enabled);
     if (enabled) {
@@ -1365,6 +1518,7 @@ void apply_headless_mode(bool enabled) {
             app.destroy_window(main_win);
             main_win = nullptr;
         }
+        refresh_screen_capture_excluded_windows();
         return;
     }
     if (!main_win && ui_server_port > 0) {
@@ -1372,6 +1526,7 @@ void apply_headless_mode(bool enabled) {
         main_win->center();
         main_win->load_url("http://127.0.0.1:" + std::to_string(ui_server_port) + "/main/main.html");
     }
+    refresh_screen_capture_excluded_windows();
     if (main_win) {
         main_win->show();
         main_win->bring_to_front(true);
@@ -2781,6 +2936,11 @@ int main(int argc, char* argv[]) {
             return "error: Required permission denied";
         }
 
+        std::string system_permission_error;
+        if (!ensure_app_level_system_permissions(macro_filename, grants, system_permission_error)) {
+            return "error: " + system_permission_error;
+        }
+
         const auto approved_before_negotiation = record.approved_rates;
         const auto approved_resources_before_negotiation = record.approved_resource_limits;
         const auto effective_rates = negotiate_effective_rates(macro_filename, current_manifest.requested_rates, record);
@@ -2944,6 +3104,10 @@ int main(int argc, char* argv[]) {
             return "error: Required permission denied";
         }
         auto grants = prompt_result.value();
+        std::string quick_system_permission_error;
+        if (!ensure_app_level_system_permissions(macro_filename, grants, quick_system_permission_error)) {
+            return "error: " + quick_system_permission_error;
+        }
         RateLimitConfig quick_rates = clamp_rate_limits(RateLimitConfig{});
         if (quick_manifest.requested_rates.mouse_events_per_sec.has_value()) {
             quick_rates.mouse_events_per_sec = std::min(quick_rates.mouse_events_per_sec, quick_manifest.requested_rates.mouse_events_per_sec.value());

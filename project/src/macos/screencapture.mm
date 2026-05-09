@@ -6,7 +6,30 @@
 #import <CoreGraphics/CoreGraphics.h>
 #include <iostream>
 #include <chrono>
+#include <mutex>
+#include <unordered_set>
+#include <vector>
 #import <Foundation/Foundation.h>
+
+namespace {
+std::mutex g_excluded_window_ids_mutex;
+std::vector<uint32_t> g_excluded_window_ids;
+
+std::vector<uint32_t> get_excluded_window_ids_snapshot() {
+    std::lock_guard<std::mutex> lock(g_excluded_window_ids_mutex);
+    return g_excluded_window_ids;
+}
+} // namespace
+
+void set_screen_capture_excluded_window_ids(const std::vector<uint32_t>& window_ids) {
+    std::lock_guard<std::mutex> lock(g_excluded_window_ids_mutex);
+    g_excluded_window_ids.clear();
+    g_excluded_window_ids.reserve(window_ids.size());
+    for (uint32_t window_id : window_ids) {
+        if (window_id == 0) continue;
+        g_excluded_window_ids.push_back(window_id);
+    }
+}
 
 void disable_app_nap() {
     if ([[NSProcessInfo processInfo] respondsToSelector:@selector(beginActivityWithOptions:reason:)]) {
@@ -175,20 +198,21 @@ public:
                 return;
             }
 
-            pid_t currentPID = [NSProcessInfo processInfo].processIdentifier;
+            std::unordered_set<uint32_t> excluded_id_set;
+            for (uint32_t window_id : get_excluded_window_ids_snapshot()) {
+                excluded_id_set.insert(window_id);
+            }
 
-            SCRunningApplication *currentApp = nil;
-            for (SCRunningApplication *app in content.applications) {
-                if (app.processID == currentPID) {
-                    currentApp = app;
-                    break;
+            NSMutableArray<SCWindow *> *excluded_windows = [NSMutableArray array];
+            for (SCWindow *window in content.windows) {
+                if (excluded_id_set.find(static_cast<uint32_t>(window.windowID)) != excluded_id_set.end()) {
+                    [excluded_windows addObject:window];
                 }
             }
 
             SCContentFilter *filter = [[SCContentFilter alloc]
                 initWithDisplay:display
-                excludingApplications:currentApp ? @[currentApp] : @[]
-                exceptingWindows:@[]];
+                excludingWindows:excluded_windows];
             
             SCStreamConfiguration *config = [[SCStreamConfiguration alloc] init];
             

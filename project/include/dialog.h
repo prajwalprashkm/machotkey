@@ -4,6 +4,7 @@
 #include <string>
 
 bool show_dialog(const std::string& title, const std::string& description);
+bool show_system_permission_dialog(const std::string& title, const std::string& description);
 
 enum class RateApprovalChoice : int {
     Deny = 0,

@@ -2,6 +2,7 @@
 #define WEBVIEW_H
 
 #include <atomic>
+#include <cstdint>
 #include <string>
 #include <functional>
 #include <vector>
@@ -45,6 +46,7 @@ public:
     void hide();
     void set_opacity(float opacity);
     void bring_to_front(bool key);
+    uint32_t get_native_window_number() const;
     bool is_ready();
 
     int x = -1, y = -1, w = -1, h = -1;

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Machotkey Feature Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Feature Demo Project</h1>
+      <p class="sub">Showcases capture, latency metrics, color scan, automation, hotkeys, UI events, and config persistence.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Runtime</h2>
+      <div class="grid two">
+        <div class="row"><span>Status</span><strong id="rtStatus">Paused</strong></div>
+        <div class="row"><span>Target seen</span><strong id="rtSeen">No</strong></div>
+        <div class="row"><span>FPS</span><strong id="rtFps">--</strong></div>
+        <div class="row"><span>Latency</span><strong id="rtLatency">--</strong></div>
+        <div class="row"><span>Dropped</span><strong id="rtDropped">--</strong></div>
+        <div class="row"><span>CPU</span><strong id="rtCpu">--</strong></div>
+        <div class="row"><span>RAM</span><strong id="rtRam">--</strong></div>
+        <div class="row"><span>Clicks/s</span><strong id="rtCps">--</strong></div>
+        <div class="row"><span>Screen</span><strong id="rtScreen">--</strong></div>
+      </div>
+      <div class="actions">
+        <button id="btnPause" class="btn">Toggle pause</button>
+        <button id="btnAuto" class="btn">Toggle automation</button>
+        <button id="btnSnap" class="btn">Flag snapshot</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Color Search Target Demo</h2>
+      <p class="hint">A black square moves on a white surface. The macro scans this UI area for color and clicks the square.</p>
+      <div id="targetArena" class="target-arena">
+        <div id="targetSquare" class="target-square"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Config overrides</h2>
+      <p class="hint">Saves to <code>config_user.lua</code>. Restart macro to apply.</p>
+      <div class="grid">
+        <label>Target FPS <input id="TARGET_FPS" type="number" min="1" max="240" step="1" /></label>
+        <label>Scan tolerance <input id="SCAN_TOLERANCE" type="number" min="0" max="64" step="1" /></label>
+        <label>Target R <input id="TARGET_R" type="number" min="0" max="255" step="1" /></label>
+        <label>Target G <input id="TARGET_G" type="number" min="0" max="255" step="1" /></label>
+        <label>Target B <input id="TARGET_B" type="number" min="0" max="255" step="1" /></label>
+        <label>Automation interval (ms) <input id="AUTOMATION_INTERVAL_MS" type="number" min="1" max="1000" step="1" /></label>
+        <label>Click X ratio <input id="CLICK_X_RATIO" type="number" min="0" max="1" step="0.01" /></label>
+        <label>Click Y ratio <input id="CLICK_Y_RATIO" type="number" min="0" max="1" step="0.01" /></label>
+      </div>
+      <div class="actions">
+        <button id="btnSave" class="btn primary">Save config_user.lua</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

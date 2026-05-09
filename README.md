@@ -61,8 +61,6 @@ Together with customizable limits and permission auditing, the stack is aimed at
 | **RAM** | No hard minimum enforced; the app itself can run with under 200 MB. However usage depends on the macros run. |
 | **Toolchain** | Xcode Command Line Tools or full Xcode (Clang, SDK) |
 | **Git** | Submodules required for bundled dependencies |
-| **Python 3** | Used at build time to generate embedded resources (`embed.h`) |
-| **Node.js** | **Not** required for the default open-source build (prebundled UI under `project/prebundled-ui/`) |
 
 Third-party libraries used by the default build are vendored under `project/libs/` (OpenCV, LuaJIT, Eigen, ImGui, sol2, etc.), typically tracked as **git submodules**. Clone with `--recurse-submodules`.
 
@@ -86,19 +84,19 @@ cd machotkey
 
 mkdir build && cd build
 cmake ..
-cmake --build . -j
+cmake --build . -j 8
 ```
 
 Or an out-of-tree build directory of your choice:
 
 ```bash
 cmake -S . -B build
-cmake --build build -j
+cmake --build build -j 8
 ```
 
 Outputs:
 
-- `build/machotkey.app` (working app bundle)
+- `build/bin/machotkey.app` (working app bundle)
 
 Release-style optimizations are the default for single-configuration generators (`CMAKE_BUILD_TYPE` defaults to **Release**). Unsigned local builds are expected unless you add your own signing step.
 

@@ -724,7 +724,6 @@ function initLSPWorker() {
 // Setup editor (NO LSP - using custom completions instead!)
 const editorSetupID = setInterval(() => {    
     setupEditor().then(() => {
-        addStatusLine("here", 'info');
         addStatusLine('Editor setup complete with custom API completions', 'success');
         // LSP initialization removed - using Monaco's built-in completions!
         //initializeLSPOriginal();
