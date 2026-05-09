@@ -23,7 +23,7 @@ Exact knobs live in project settings, sandbox profiles, and Lua APIs as document
 
 ## Performance and safety (measured highlights)
 
-Figures below are **author-measured** on capable Apple Silicon setups (resolution, refresh rate, display count, and macro workload affect real numbers). Treat them as indicative of what the architecture targets, not a guarantee on every machine.
+Figures below are **author-measured** on capable Apple Silicon setups (resolution, refresh rate, display count, and macro workload affect real numbers). Treat them as indicative of what the architecture targets, not a guarantee on every machine. Tested on a Macbook Air M2 chip with 8 GB of unified memory.
 
 | Area | Result |
 |------|--------|
