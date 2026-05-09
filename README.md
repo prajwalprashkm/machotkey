@@ -1,96 +1,70 @@
-# User Build Guide (Offline, arm64 macOS 14+)
+# Machotkey
 
-This guide describes the user-facing build flow available directly from root `CMakeLists.txt`.
+Native macOS macro scripting application: write macros in **Lua** (LuaJIT), automate keyboard and mouse, capture and analyze the screen with **OpenCV**, and drive the UI through embedded **WebKit** views with an optional **ImGui** overlay path.
 
-## Audience
+The design splits privileges cleanly:
 
-- End users building natively from source.
-- Offline-first build behavior.
-- No Homebrew dependency path required by default.
+- **machotkey** — main host process (UI, elevated capabilities).
+- **macro_runner** — sandboxed child that runs Lua scripts and talks to the host over IPC and shared memory.
 
-## Requirements
+That separation keeps everyday scripting constrained while the host can perform platform actions on behalf of trusted workflows.
 
-- Apple Silicon Mac (arm64)
-- macOS 14+
-- Xcode Command Line Tools (or full Xcode toolchain)
-- Git with submodule support
-- Python 3
+## Specs and requirements
 
-Node/npm is not required in this flow.
+| Item | Detail |
+|------|--------|
+| **Platform** | macOS **14.0+** (see `LSMinimumSystemVersion` in `project/resources/Info.plist`) |
+| **CPU** | **Apple Silicon (arm64)** — CMake targets arm64 |
+| **RAM** | No hard minimum enforced; **8 GB** is workable for development builds (OpenCV from source is the heaviest step). More RAM speeds clean rebuilds. |
+| **Toolchain** | Xcode Command Line Tools or full Xcode (Clang, SDK) |
+| **Git** | Submodules required for bundled dependencies |
+| **Python 3** | Used at build time to generate embedded resources (`embed.h`) |
+| **Node.js** | **Not** required for the default open-source build (prebundled UI under `project/prebundled-ui/`) |
 
-## Dependency resolution (offline, submodule-first)
+Third-party libraries used by the default build are vendored under `project/libs/` (OpenCV, LuaJIT, Eigen, ImGui, sol2, etc.), typically tracked as **git submodules**. Clone with `--recurse-submodules`.
 
-- Bundled source tree is the default dependency source.
-- No Homebrew dependency path is required in this flow.
-- No build-time network fetching is performed.
+## Tested configuration
 
-### Dependencies handled automatically in user flow
+End-to-end builds have been exercised on:
 
-- **OpenCV**: built from bundled source under `project/libs/opencv`.
-- **LuaJIT**: built from bundled source under `project/libs/luajit/src`.
-- **Eigen**: resolved from bundled source include path (`project/libs/eigen`).
-- **ImGui**: compiled directly from bundled source in `project/libs/imgui`.
-- **Header-only vendored libs**: `sol2`, `httplib`, and `nlohmann/json` are consumed directly as source includes.
+- **Apple M2 MacBook Air**, **8 GB RAM**, macOS with Apple Clang / Xcode toolchain.
 
-### Removed manual "custom built by me" requirement
+Other Apple Silicon Macs with sufficient disk and RAM should work; first-time OpenCV builds are CPU- and memory-intensive.
 
-In this user flow, end users no longer need to manually prebuild custom local install trees for:
+## Building from source
 
-- Eigen
-- OpenCV
-- LuaJIT
-
-## Clone
-
-Clone with submodules so local dependency source is present:
+From the repository root:
 
 ```bash
-git clone --recurse-submodules <your-repo-url> machotkey-release
-cd machotkey-release
+git clone --recurse-submodules https://github.com/<your-org>/machotkey.git
+cd machotkey
+
+mkdir build && cd build
+cmake ..
+cmake --build . -j
 ```
 
-If you already cloned:
+Or an out-of-tree build directory of your choice:
 
 ```bash
-git submodule update --init --recursive
+cmake -S . -B build
+cmake --build build -j
 ```
 
-## Prebundled UI Contract
+Outputs:
 
-Default build mode expects:
+- `build/machotkey.app` (or `build-user/…` if you used another folder name)
+- Inside the bundle: **`machotkey`** and **`macro_runner`** under `Contents/MacOS/`
 
-- `project/prebundled-ui/main/main.html`
-- `project/prebundled-ui/main/assets/...`
-- `project/prebundled-ui/overlay/macro_controls.html`
-- `project/prebundled-ui/overlay/assets/...`
+Release-style optimizations are the default for single-configuration generators (`CMAKE_BUILD_TYPE` defaults to **Release**). Unsigned local builds are expected unless you add your own signing step.
 
-These will be copied into:
+### Maintainer workflow
 
-- `${CMAKE_BINARY_DIR}/machotkey.app/Contents/Resources/main/`
-- `${CMAKE_BINARY_DIR}/machotkey.app/Contents/Resources/overlay/`
+- **`CMakeLists.local.txt`** — optional local maintainer CMake entrypoint (not required for the default root build).
+- **Prebundled UI** — `project/prebundled-ui/main/` and `project/prebundled-ui/overlay/` must contain the shipped HTML and hashed assets (see `project/prebundled-ui/README.md`).
 
-## Configure + Build
+Dependency knobs live under **`cmake/user/`** (included from root `CMakeLists.txt`).
 
-```bash
-cmake -S . -B build-user
-cmake --build build-user -j
-```
+## License
 
-## Output
-
-App bundle output:
-
-- `build-user/machotkey.app`
-
-The bundle contains both executables:
-
-- `build-user/machotkey.app/Contents/MacOS/machotkey`
-- `build-user/machotkey.app/Contents/MacOS/macro_runner`
-
-## Scope
-
-This entrypoint is intentionally fixed to:
-
-- Offline dependency resolution
-- Prebundled UI copy into app resources
-- Unsigned local user builds
+Add your license here when you publish (for example MIT, Apache-2.0, or GPLv3).
