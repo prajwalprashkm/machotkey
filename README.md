@@ -18,12 +18,13 @@ Machotkey is built to be **tunable end-to-end**:
 - **Permissions model** — capabilities are driven by a **manifest-style permission audit** (declared intents vs what the runtime allows), with workflows for **secure permission reset** when you change scope.
 - **Trust on edit** — when macro **source changes**, the tooling can **re-verify hashes** so altered scripts do not silently keep stale privileges (reduces the chance of tampered code running with broader access than you approved).
 - **UI** — Web-based panels plus optional overlay paths let you adapt editor and control surfaces without rewriting the native core.
+- **Displays** — **Multiple displays** are supported for capture and automation workflows (choose targets via the APIs/settings your macros use).
 
 Exact knobs live in project settings, sandbox profiles, and Lua APIs as documented in-repo.
 
 ## Performance and safety (measured highlights)
 
-Figures below are **author-measured** under a **real macro workload** (automating a game—CPU/GPU‑heavy, continuous capture + input). Resolution, refresh rate, display count, and script logic still affect your results; treat numbers as **representative**, not universal.
+Figures below are **author-measured** under a **real macro workload** (automating a game—CPU/GPU‑heavy, continuous capture + input). Resolution, refresh rate, **how many displays are actively captured**, and script logic still affect your results; treat numbers as **representative**, not universal.
 
 **Hardware reference:** Apple **M2 MacBook Air**, **8 GB** unified memory.
 
@@ -38,7 +39,7 @@ That isolates **capture → delivery into script** overhead rather than “best 
 
 ### High-DPI / buffer shape for vision workloads
 
-“High DPI” here means a **2× Retina** full-frame buffer **2214×3420** (used when quoting full-screen **color search** time). Other resolutions scale search cost accordingly.
+“High DPI” here means a **2× Retina** full-frame buffer **2214×3420** on **one** display (used when quoting full-screen **color search** time). Other resolutions and **multi-display** setups scale cost and throughput accordingly.
 
 | Area | Result |
 |------|--------|
@@ -55,6 +56,7 @@ Together with customizable limits and permission auditing, the stack is aimed at
 | Item | Detail |
 |------|--------|
 | **Platform** | macOS **14.0+** (see `LSMinimumSystemVersion` in `project/resources/Info.plist`) |
+| **Displays** | **Multiple displays** supported |
 | **CPU** | **Apple Silicon (arm64)** — CMake targets arm64. Usage depends on the macros run. |
 | **RAM** | No hard minimum enforced; the app itself can run with under 200 MB. However usage depends on the macros run. |
 | **Toolchain** | Xcode Command Line Tools or full Xcode (Clang, SDK) |
