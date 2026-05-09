@@ -268,15 +268,17 @@ public:
             return static_cast<double>(CACurrentMediaTime()*1000000);
         };
 
+        // Bind as explicit read-only properties for better compatibility across
+        // older Apple clang/sol2 combinations (member-pointer binding can fail).
         lua.new_usertype<LuaDisplay>("Display",
-            "id", &LuaDisplay::id,
-            "x", &LuaDisplay::x,
-            "y", &LuaDisplay::y,
-            "w", &LuaDisplay::w,
-            "h", &LuaDisplay::h,
-            "scale", &LuaDisplay::scale,
-            "refresh_rate", &LuaDisplay::refresh_rate,
-            "is_main", &LuaDisplay::is_main
+            "id", sol::property([](const LuaDisplay& d) { return d.id; }),
+            "x", sol::property([](const LuaDisplay& d) { return d.x; }),
+            "y", sol::property([](const LuaDisplay& d) { return d.y; }),
+            "w", sol::property([](const LuaDisplay& d) { return d.w; }),
+            "h", sol::property([](const LuaDisplay& d) { return d.h; }),
+            "scale", sol::property([](const LuaDisplay& d) { return d.scale; }),
+            "refresh_rate", sol::property([](const LuaDisplay& d) { return d.refresh_rate; }),
+            "is_main", sol::property([](const LuaDisplay& d) { return d.is_main; })
         );
 
         screen["get_displays"] = [](){
