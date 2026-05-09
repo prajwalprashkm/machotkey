@@ -1,0 +1,21 @@
+[submodule "project/libs/eigen"]
+	path = project/libs/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "project/libs/imgui"]
+	path = project/libs/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "project/libs/luajit"]
+	path = project/libs/luajit
+	url = https://luajit.org/git/luajit.git
+[submodule "project/libs/opencv"]
+	path = project/libs/opencv
+	url = https://github.com/opencv/opencv.git
+[submodule "project/libs/opencv_contrib"]
+	path = project/libs/opencv_contrib
+	url = https://github.com/opencv/opencv_contrib.git
+[submodule "project/libs/sol2"]
+	path = project/libs/sol2
+	url = https://github.com/ThePhD/sol2.git
+[submodule "project/libs/ffmpeg"]
+	path = project/libs/ffmpeg
+	url = https://github.com/FFmpeg/FFmpeg

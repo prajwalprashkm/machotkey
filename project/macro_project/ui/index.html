@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Macro config</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>Macro configuration</h1>
+            <p class="sub">Edit constants stored in <code>config_user.lua</code> — restart the macro after save.</p>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn-ghost" id="btnReset">Reset overrides</button>
+            <button type="button" class="btn-primary" id="btnSave">Save</button>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <div class="grid" id="formRoot"></div>
+        <p class="hint">Mode checkboxes match <code>config.lua</code>: only one “preset” is usually active; toggles are persisted as-is for this demo.</p>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="app.js"></script>
+</body>
+</html>

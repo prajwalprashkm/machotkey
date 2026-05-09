@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macro Script Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --border-color: #3e3e42;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent: #007acc;
+            --accent-hover: #1c97ea;
+            --success: #4ec9b0;
+            --error: #f48771;
+            --warning: #dcdcaa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Toolbar */
+       
+        /* 3. Ensure the toolbar doesn't force a minimum width */
+        .toolbar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            min-width: 0;
+            overflow: hidden; /* Keeps buttons from popping out */
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border-color);
+            margin: 0 4px;
+        }
+
+        button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+            font-weight: 500;
+        }
+
+        button.primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        button.icon-only {
+            padding: 6px 8px;
+            min-width: 32px;
+            justify-content: center;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-name {
+            color: var(--text-secondary);
+            font-size: 13px;
+            padding: 0 8px;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+                /* 1. Allow the main container to shrink in both directions */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        /* 2. Allow the editor container to shrink horizontally */
+        .app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            background: var(--bg-primary);
+            min-width: 0; 
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #editor {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+        }
+        
+        #activity-bar {
+            width: 50px; /* Standard VS Code sidebar width */
+            height: 100%;
+            border-right: 1px solid #333; /* Visual separator */
+            background-color: #1e1e1e;   /* Match VS Code default dark */
+            overflow: hidden;            /* Critical for the internal layout engine */
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        #file-sidebar {
+            width: 275px; /* Standard VS Code sidebar width */
+            height: 100%;
+            border-right: 1px solid #333; /* Visual separator */
+            background-color: #1e1e1e;   /* Match VS Code default dark */
+            overflow: visible;            /* Changed from hidden to visible */
+            position: relative;
+            min-width: 100px;
+            max-width: 500px;
+            flex-shrink: 0;
+        }
+        
+        #file-sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            border-right: none;
+        }
+        
+        .file-resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            cursor: pointer;
+            background: transparent;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+
+        .file-resize-handle:hover {
+            background: var(--accent);
+        }
+        
+        #file-sidebar.collapsed .file-resize-handle {
+            right: -5px;
+            background: var(--accent);
+            opacity: 0.7;
+        }
+        
+        #file-sidebar.collapsed .file-resize-handle:hover {
+            opacity: 1;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            min-width: 200px;
+            max-width: 600px;
+            flex-shrink: 0;
+        }
+
+        .resize-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            cursor: ew-resize;
+            background: transparent;
+            z-index: 10;
+        }
+
+        .resize-handle:hover,
+        .resize-handle.resizing {
+            background: var(--accent);
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-tab.active {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Status Panel */
+        .status-section {
+            display: none;
+        }
+
+        .status-section.active {
+            display: block;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .status-header h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .clear-btn {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+
+        .status-output {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 12px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .status-line {
+            margin-bottom: 4px;
+            word-wrap: break-word;
+        }
+
+        .status-line.info {
+            color: var(--text-primary);
+        }
+
+        .status-line.success {
+            color: var(--success);
+        }
+
+        .status-line.error {
+            color: var(--error);
+        }
+
+        .status-line.warning {
+            color: var(--warning);
+        }
+
+        .status-line .timestamp {
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+
+        /* Settings Panel */
+        .settings-section {
+            display: none;
+        }
+
+        .settings-section.active {
+            display: block;
+        }
+
+        .settings-subtabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .settings-subtab {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .settings-subtab.active {
+            color: var(--text-primary);
+            border-color: var(--accent);
+            background: rgba(0, 122, 204, 0.15);
+        }
+
+        .settings-subpanel {
+            display: none;
+        }
+
+        .settings-subpanel.active {
+            display: block;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .settings-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .settings-card h4 {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .settings-note {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .project-dir-display {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .permission-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .permission-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+        }
+
+        .permission-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .permission-name {
+            font-size: 13px;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .permission-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .permission-badge.required {
+            color: var(--error);
+            border-color: rgba(244, 135, 113, 0.35);
+            background: rgba(244, 135, 113, 0.1);
+        }
+
+        .permission-badge.optional {
+            color: var(--warning);
+            border-color: rgba(220, 220, 170, 0.35);
+            background: rgba(220, 220, 170, 0.1);
+        }
+
+        .rate-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .rate-row {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            padding: 10px;
+        }
+
+        .rate-row label {
+            margin-bottom: 6px;
+        }
+
+        .rate-row-meta {
+            margin-top: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.35;
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .setting-group input[type="text"],
+        .setting-group input[type="number"],
+        .setting-group select {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .setting-group input:focus,
+        .setting-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: normal;
+            color: var(--text-primary);
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4e4e50;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-indicator.ready {
+            background: var(--success);
+        }
+
+        .status-indicator.running {
+            background: var(--accent);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .status-indicator.error {
+            background: var(--error);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .fontawesome-icon {
+            color: white;
+        }
+
+        /* File Tree Styles */
+        .file-sidebar .sidebar-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-sidebar .sidebar-header h3 {
+            margin: 0;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: unset;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 4px;
+            user-select: none;
+        }
+
+        .file-tree-item {
+            margin: 1px 0;
+        }
+
+        .file-tree-row {
+            display: flex;
+            align-items: center;
+            padding: 3px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .file-tree-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .file-tree-row.active {
+            background: rgba(0, 122, 204, 0.2);
+            color: var(--accent);
+        }
+
+        .file-tree-row .icon {
+            margin-right: 6px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .file-tree-row .name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-tree-children {
+            padding-left: 16px;
+        }
+
+        .file-tree-item.expanded > .file-tree-row.folder .icon {
+            content: '📂';
+        }
+
+        .folder-chevron {
+            margin-right: 4px;
+            font-size: 10px;
+            transition: transform 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .file-tree-item.expanded > .file-tree-row .folder-chevron {
+            transform: rotate(90deg);
+        }
+
+        /* Hover bg color */
+        .hover-bg {
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+  <script type="module" crossorigin src="./assets/main.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/main-CKnJx0qJ.css">
+</head>
+<body>
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <input type="file" id="fileInput" class="file-input" accept=".lua,.txt,.js">
+            <!--<button id="openFolderBtn" title="Open Folder">
+                <span class="fa-solid fa-folder-open fontawesome-icon"></span>
+                <span>Open Folder</span>
+            </button>!-->
+            <button id="openBtn" title="Open File">
+                <span class="fa-solid fa-file fontawesome-icon"></span>
+                <span>Open File</span>
+            </button>
+            <button id="saveBtn" title="Save File (Cmd+S)">
+                <span class="fa-solid fa-floppy-disk fontawesome-icon"></span>
+                <span>Save</span>
+            </button>
+            <button id="newFileBtn" title="New File">
+                <span class="fa-solid fa-file-circle-plus fontawesome-icon"></span>
+                <span>New</span>
+            </button>
+            <button id="projectBtn" title="Load Project">
+                <span class="fa-solid fa-folder-open fontawesome-icon"></span>
+                <span>Load Project</span>
+            </button>
+        </div>
+        
+        <div class="toolbar-divider"></div>
+        
+        <div class="toolbar-group">
+            <button id="runScriptBtn" class="primary" title="Run Quick Script (Cmd+Enter)">
+                <span class="fa-solid fa-play fontawesome-icon"></span>
+                <span>Run Script</span>
+            </button>
+            <button id="runProjectBtn" title="Run Loaded Project Manifest Entry">
+                <span class="fa-solid fa-play fontawesome-icon"></span>
+                <span>Run Project</span>
+            </button>
+        </div>
+        
+        <div class="toolbar-divider"></div>
+        
+        <span class="file-name" id="fileName">No file loaded</span>
+        
+        <div style="flex: 1"></div>
+        
+        <div class="toolbar-group">
+            <span class="status-indicator ready" id="statusIndicator"></span>
+            <span id="statusText" style="font-size: 12px; color: var(--text-secondary);">Ready</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Editor -->
+        <div class="app-container">
+            <div id="activity-bar"></div>
+            <div id="file-sidebar" class="file-sidebar collapsed">
+                <!-- VS Code will render explorer here -->
+            </div>
+            <div id="editor"></div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="resize-handle" id="resizeHandle"></div>
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" data-tab="status">Console</button>
+                <button class="sidebar-tab" data-tab="settings">Settings</button>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- Status Panel -->
+                <div class="status-section active" id="statusPanel">
+                    <div class="status-header">
+                        <h3>Output</h3>
+                        <button class="clear-btn" id="clearBtn">Clear</button>
+                    </div>
+                    <div class="status-output" id="statusOutput">
+                        <div class="status-line info">
+                            <span class="timestamp">[Ready]</span>
+                            <span>Waiting for script execution...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Panel -->
+                <div class="settings-section" id="settingsPanel">
+                    <div class="settings-subtabs">
+                        <button id="projectSettingsTab" class="settings-subtab active" type="button">Project Security</button>
+                        <button id="editorSettingsTab" class="settings-subtab" type="button">Editor</button>
+                    </div>
+
+                    <div id="projectSettingsPage" class="settings-subpanel active">
+                        <div class="settings-card">
+                            <h4>Project</h4>
+                            <div class="setting-group">
+                                <label>Loaded Project Directory</label>
+                                <div id="projectDirDisplay" class="project-dir-display">No project loaded</div>
+                            </div>
+                            <div class="settings-note">Permission and rate changes below are project-scoped and apply on next run.</div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h4>Permission Policy</h4>
+                            <div class="setting-group checkbox-group">
+                                <input type="checkbox" id="resetOnCodeChangeCheck" checked>
+                                <label for="resetOnCodeChangeCheck">Reset project permissions on code change</label>
+                            </div>
+                            <button id="resetPermissionsBtn" class="clear-btn" type="button">Reset Saved Permissions</button>
+                            <div class="settings-note">Changes apply on next run. Running macros are not affected, and stop control remains in the overlay.</div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h4>Global Max Rate Limits</h4>
+                            <div class="settings-note">Applies to all macros. Project-approved rates cannot exceed these maxima.</div>
+                            <div class="rate-grid">
+                                <div class="rate-row">
+                                    <label for="globalMouseRateInput">Mouse events / sec (global max)</label>
+                                    <input type="number" id="globalMouseRateInput" min="1" step="1">
+                                </div>
+                                <div class="rate-row">
+                                    <label for="globalKeyboardRateInput">Keyboard events / sec (global max)</label>
+                                    <input type="number" id="globalKeyboardRateInput" min="1" step="1">
+                                </div>
+                                <div class="rate-row">
+                                    <label for="globalKeyboardTextRateInput">Keyboard text chars / sec (global max)</label>
+                                    <input type="number" id="globalKeyboardTextRateInput" min="1" step="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h4>Runtime Resource Limits</h4>
+                            <div class="settings-note">CPU throttling and memory safety caps for runner processes.</div>
+                            <div class="rate-grid">
+                                <div class="rate-row">
+                                    <label for="cpuThrottlePercentInput">CPU throttle-at percent</label>
+                                    <input type="number" id="cpuThrottlePercentInput" min="5" max="800" step="1">
+                                    <div class="rate-row-meta">Throttling starts above this value.</div>
+                                </div>
+                                <div class="rate-row">
+                                    <label for="cpuKillPercentInput">CPU hard-stop-at percent</label>
+                                    <input type="number" id="cpuKillPercentInput" min="5" max="800" step="1">
+                                    <div class="rate-row-meta">If usage stays at/above this value for 3s, macro is stopped.</div>
+                                </div>
+                                <div class="rate-row">
+                                    <label for="residentRamLimitMbInput">Resident RAM hard limit (MB)</label>
+                                    <input type="number" id="residentRamLimitMbInput" min="128" step="1">
+                                </div>
+                                <div class="rate-row">
+                                    <div class="checkbox-group" style="margin-bottom: 8px;">
+                                        <input type="checkbox" id="virtualRamLimitEnabledCheck">
+                                        <label for="virtualRamLimitEnabledCheck">Enable virtual RAM extra-limit</label>
+                                    </div>
+                                    <label for="virtualRamLimitMbInput">Virtual RAM extra hard limit (MB)</label>
+                                    <input type="number" id="virtualRamLimitMbInput" min="512" step="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h4>Rate Limits</h4>
+                            <div class="settings-note">Set per-project approved maximums. Requested rates at or below these values are granted silently.</div>
+                            <div class="rate-grid">
+                                <div class="rate-row">
+                                    <label for="approvedMouseRateInput">Mouse events / sec (approved max)</label>
+                                    <input type="number" id="approvedMouseRateInput" min="1" step="1">
+                                    <div id="mouseRateMeta" class="rate-row-meta">Requested: -- | Effective next run: --</div>
+                                </div>
+                                <div class="rate-row">
+                                    <label for="approvedKeyboardRateInput">Keyboard events / sec (approved max)</label>
+                                    <input type="number" id="approvedKeyboardRateInput" min="1" step="1">
+                                    <div id="keyboardRateMeta" class="rate-row-meta">Requested: -- | Effective next run: --</div>
+                                </div>
+                                <div class="rate-row">
+                                    <label for="approvedKeyboardTextRateInput">Keyboard text chars / sec (approved max)</label>
+                                    <input type="number" id="approvedKeyboardTextRateInput" min="1" step="1">
+                                    <div id="keyboardTextRateMeta" class="rate-row-meta">Requested: -- | Effective next run: --</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h4>Project Permissions</h4>
+                            <div class="settings-note">Changes apply on next run.</div>
+                            <div id="projectPermissionList" class="permission-list">
+                                <div class="settings-note">Load a project to view permissions.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="editorSettingsPage" class="settings-subpanel">
+                        <div class="settings-card">
+                            <h4>Editor</h4>
+                            <div class="setting-group">
+                                <label>Editor Theme</label>
+                                <select id="themeSelect">
+                                    <option value="Default Dark Modern" selected>Dark (Default)</option>
+                                    <option value="Visual Studio Light">Light</option>
+                                    <option value="Default High Contrast">High Contrast</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <label>Font Size</label>
+                                <input type="number" id="fontSizeInput" value="14" min="10" max="24">
+                            </div>
+                            
+                            <div class="setting-group">
+                                <label>Tab Size</label>
+                                <input type="number" id="tabSizeInput" value="4" min="2" max="8">
+                            </div>
+                            
+                            <div class="setting-group checkbox-group">
+                                <input type="checkbox" id="autoSaveCheck">
+                                <label for="autoSaveCheck">Auto-save on run</label>
+                            </div>
+                            
+                            <div class="setting-group checkbox-group">
+                                <input type="checkbox" id="lineNumbersCheck" checked>
+                                <label for="lineNumbersCheck">Show line numbers</label>
+                            </div>
+                            
+                            <div class="setting-group checkbox-group">
+                                <input type="checkbox" id="miniMapCheck" checked>
+                                <label for="miniMapCheck">Show minimap</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/6f2c70436b.js" crossorigin="anonymous"></script>
+</body>
+</html>

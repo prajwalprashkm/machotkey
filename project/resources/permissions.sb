@@ -1,0 +1,130 @@
+(version 1)
+(deny default)
+
+;; --- 1. Execution & Memory Mapping ---
+(allow process-exec* (target self))
+(allow process-codesigning-status-get)
+(allow file-map-executable
+    (subpath "/System/Library/Frameworks")
+    (subpath "/System/Library/PrivateFrameworks")
+    (subpath "/System/Library/AssetsV2")
+    (subpath "/System/Library/Extensions"))
+
+;; --- 2. IPC & Shared Memory ---
+(allow ipc-posix-shm* (ipc-posix-name-regex #"^/macro_buffer_shm")
+    (ipc-posix-name-regex #"^apple\.shm\.cfprefs\.")
+    (ipc-posix-name-regex #"^/tmp/com\.apple\.Vision"))
+
+;; --- 3. Mach Lookup (Consolidated) ---
+(allow mach-lookup
+    (global-name "com.apple.NLP")
+    (global-name "com.apple.LinguisticData")
+    (global-name "com.apple.CoreRecognition")
+    (global-name "com.apple.CoreML.validator")
+    (global-name "com.apple.analyticsd")
+    (global-name "com.apple.appleneuralengine")
+    (global-name "com.apple.bsd.dirhelper")
+    (global-name "com.apple.cfprefsd.daemon")
+    (global-name "com.apple.cmio.registerassistantservice")
+    (global-name "com.apple.coremedia.endpoint.xpc")
+    (global-name "com.apple.coremedia.sandboxserver")
+    (global-name "com.apple.coreservices.launchservicesd")
+    (global-name "com.apple.diagnosticd")
+    (global-name "com.apple.distributed_objects.rpcserver")
+    (global-name "com.apple.fonts")
+    (global-name "com.apple.gpumswand")
+    (global-name "com.apple.ioacceleratord")
+    (global-name "com.apple.languageassetd")
+    (global-name "com.apple.lsd.mapdb")
+    (global-name "com.apple.mediaanalysisd.service.public")
+    (global-name "com.apple.mediaanalysisd.service.internal")
+    (global-name "com.apple.mobileassetd")
+    (global-name "com.apple.mobileassetd.v2")
+    (global-name "com.apple.nehelper")
+    (global-name "com.apple.nesessionmanager")
+    (global-name "com.apple.system.logger")
+    (global-name "com.apple.system.notification_center")
+    (global-name "com.apple.system.opendirectoryd.libinfo")
+    (global-name "com.apple.tcc")
+    (global-name "com.apple.tcc.reporting")
+    (global-name "com.apple.textserviced")
+    (global-name "com.apple.translationd")
+    (global-name "com.apple.tsm.uiserver")
+    (global-name "com.apple.vcp_v2")
+    (global-name "com.apple.videotoolbox.visuallookupservice")
+    (global-name "com.apple.windowserver.active")
+    (global-name "com.apple.CoreDisplay.Root")
+    (global-name "com.apple.PowerManagement.control"))
+
+;; --- 4. File System Access ---
+(allow file-read*
+    (subpath "/usr/lib")
+    (subpath "/usr/share")
+    (subpath "/System/Library")
+    (subpath "/Library/Caches/com.apple.MobileAsset")
+    (subpath "/private/var/db/com.apple.LanguageModeling")
+    (subpath "/private/var/db/com.apple.metal")
+    (subpath "/private/var/db/Metal")
+    (subpath "/private/var/db/CVMS")
+    (subpath "/private/var/db/CoreMSL")
+    (subpath "/private/var/db/vision")
+    (literal "/dev/urandom")
+    (literal "/dev/null"))
+
+(allow file-read* file-write*
+    (subpath "/private/var/folders")
+    (subpath "/var/folders")
+    (subpath "/private/var/tmp")
+    (regex #"^/private/var/folders/[^/]+/[^/]+/C/com\.apple\.metal")
+    (regex #"^/private/var/folders/[^/]+/[^/]+/C/com\.apple\.VisionLite")
+    (regex #"^/private/var/folders/[^/]+/[^/]+/T/Vision")
+)
+
+(allow file-read-metadata (subpath "/"))
+
+;; --- 5. IOKit (Hardware Path) ---
+(allow iokit-open
+    (iokit-user-client-class "AppleSNESUserClient")
+    (iokit-user-client-class "AppleAVDUserClient")
+    (iokit-user-client-class "IOSurfaceRootUserClient")
+    (iokit-user-client-class "IOSurfaceSendRight")
+    (iokit-user-client-class "IOSurfaceAcceleratorClient")
+    (iokit-user-client-class "IOGPUCommandQueue")
+    (iokit-user-client-class "IOGPUContext")
+    (iokit-user-client-class-regex #"^IOAccel")
+    (iokit-user-client-class-regex #"^AGX")
+    (iokit-user-client-class-regex #"^H[0-9]+ANEInDirectPathClient$"))
+
+(allow iokit-set-properties (iokit-property "IOSurfacePurgeable"))
+
+(allow iokit-get-properties
+    (iokit-property "IOClassNameOverride")
+    (iokit-property "IOBundleIdentifierOverride")
+    (iokit-property "IOGLBundleName")
+    (iokit-property "IOGLESBundleName")
+    (iokit-property "MetalPluginName")
+    (iokit-property "MetalPluginClassName")
+    (iokit-property "IOSurfaceAcceleratorCapabilitiesDict")
+    (iokit-property "AppleJPEGSupport")
+    (iokit-property "apple-ane-sequencer-common")
+    (iokit-property "iogpu-wide-memory")
+    (iokit-property "metal-plugin-name")
+    (iokit-property "Protocol Characteristics")
+    (iokit-property "SafeEjectRequested")
+    (iokit-property "Interconnect")
+    (iokit-property "Device Characteristics"))
+
+;; --- 6. System & Signals ---
+(allow signal (target self))
+(allow sysctl-read
+    (sysctl-name "hw.ncpu")
+    (sysctl-name "hw.model")
+    (sysctl-name "hw.logicalcpu")
+    (sysctl-name "kern.osrelease")
+    (sysctl-name "kern.hv_vmm_present")
+    (sysctl-name "hw.memsize")           ;; Total physical memory
+    (sysctl-name "hw.pagesize")          ;; Size of a single memory page
+    (sysctl-name "vm.loadavg")           ;; System load (used for power scaling)
+    (sysctl-name "machdep.cpu.brand_string") ;; Detailed CPU name
+    (sysctl-name "kern.bootsessionuuid") ;; Often used for cache isolation
+)
