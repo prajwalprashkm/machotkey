@@ -23,13 +23,28 @@ Exact knobs live in project settings, sandbox profiles, and Lua APIs as document
 
 ## Performance and safety (measured highlights)
 
-Figures below are **author-measured** on capable Apple Silicon setups (resolution, refresh rate, display count, and macro workload affect real numbers). Treat them as indicative of what the architecture targets, not a guarantee on every machine. Tested on a Apple M2 MacBook Air with 8 GB of unified memory.
+Figures below are **author-measured** under a **real macro workload** (automating a game—CPU/GPU‑heavy, continuous capture + input). Resolution, refresh rate, display count, and script logic still affect your results; treat numbers as **representative**, not universal.
+
+**Hardware reference:** Apple **M2 MacBook Air**, **8 GB** unified memory.
+
+### How frame latency was measured
+
+Latency is **not** a synthetic microbenchmark in isolation. While that macro runs, latency is computed from **Mach timestamps**:
+
+1. Timestamp attached to the frame by **ScreenCaptureKit**
+2. Timestamp when the **same frame is observable in Lua**
+
+That isolates **capture → delivery into script** overhead rather than “best case in a vacuum.” Observed delivery is **under 0.2 ms** in this setup.
+
+### High-DPI / buffer shape for vision workloads
+
+“High DPI” here means a **2× Retina** full-frame buffer **2214×3420** (used when quoting full-screen **color search** time). Other resolutions scale search cost accordingly.
 
 | Area | Result |
 |------|--------|
-| **Frame pipeline** | Sub-**0.1 ms** typical **delivery latency** from capture path into consumers when tuned for throughput |
-| **Capture throughput** | **200+ FPS** frame capture in favorable configurations; **ceilings track monitor refresh** and system load |
-| **Color search** | On the order of **~2 ms** for a **full high-DPI frame** scan using the optimized search path (content-dependent) |
+| **Frame pipeline** | **&lt; 0.2 ms** typical **SCKit timestamp → Lua** delivery latency (Mach-time comparison above), under the game automation workload |
+| **Capture throughput** | **ScreenCaptureKit** capture typically holds **90%+ of the display refresh rate** in author testing (often **200+ FPS** where the panel supports it); ceilings follow refresh and system load |
+| **Color search** | On the order of **~2 ms** for a **full-frame** scan at **2214×3420** using the optimized search path (content-dependent) |
 | **Input automation** | **Low-latency** synthesized keyboard and mouse events intended for interactive automation |
 | **Defense in depth** | **Seatbelt-style sandboxing** for the macro runner to contain malicious or buggy scripts; host stays privileged but strictly mediates dangerous operations |
 
