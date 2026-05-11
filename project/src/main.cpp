@@ -760,6 +760,10 @@ ResourceLimitConfig negotiate_effective_resource_limits(const std::string& macro
         }
     }
 
+    DEBUG_LOG("\n\n[MAIN]: Using cpu throttle " << effective.cpu_throttle_percent << "%, cpu kill " << effective.cpu_kill_percent
+              << "%, resident RAM " << effective.resident_ram_limit_bytes / (1024.0 * 1024.0) << " MB, virtual RAM "
+              << effective.virtual_ram_limit_bytes / (1024.0 * 1024.0) << " MB, virtual RAM enabled " << effective.virtual_ram_limit_enabled << "\n\n\n");
+
     record.approved_resource_limits = clamp_resource_limits(record.approved_resource_limits);
     effective = clamp_resource_limits(effective);
     return effective;

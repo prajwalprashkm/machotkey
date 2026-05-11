@@ -224,6 +224,76 @@ button:active {
   opacity: 1;
 }
 
+/* OpenCV CPU notice (modal) */
+.modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-root.open {
+  display: flex;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modal-panel {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.modal-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-body {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.modal-body p {
+  margin: 0 0 10px 0;
+}
+
+.modal-body p:last-of-type {
+  margin-bottom: 14px;
+}
+
+.modal-body code {
+  font-size: 11px;
+  background: var(--bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.modal-body strong {
+  color: var(--text);
+}
+
+.modal-ok {
+  width: 100%;
+  margin-top: 4px;
+}
+
 .toast.ok {
   background: var(--surface2);
   color: var(--accent);

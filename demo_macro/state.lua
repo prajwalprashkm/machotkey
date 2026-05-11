@@ -29,6 +29,9 @@ local M = {
 
   color_seed = 0,
   ui_screen_hint = nil,
+
+  --- OpenCV: workloads.lua runs real OpenCV only after WebView opencv_ack (CPU dialog)
+  opencv_acknowledged = true,
 }
 
 return M

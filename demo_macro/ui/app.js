@@ -13,6 +13,31 @@
 
   var currentPhase = "idle";
 
+  function hideOpencvModal() {
+    var root = document.getElementById("opencvModal");
+    if (!root) return;
+    root.classList.remove("open");
+    root.setAttribute("aria-hidden", "true");
+  }
+
+  function showOpencvModal() {
+    var root = document.getElementById("opencvModal");
+    if (!root) return;
+    root.classList.add("open");
+    root.setAttribute("aria-hidden", "false");
+    var ok = document.getElementById("opencvModalOk");
+    if (ok) ok.focus();
+  }
+
+  function syncOpencvModal(phase, opencvAcknowledged) {
+    var pending = phase === "opencv" && opencvAcknowledged === false;
+    if (pending) {
+      showOpencvModal();
+    } else {
+      hideOpencvModal();
+    }
+  }
+
   function emit(name, payload) {
     if (window.macroUI && window.macroUI.emit) {
       window.macroUI.emit(name, payload != null ? payload : "");
@@ -37,9 +62,14 @@
 
   window.demoApplyRuntime = function (data) {
     data = data || {};
+    var ack = data.opencv_acknowledged;
+    if (ack === undefined || ack === null) {
+      ack = true;
+    }
     if (data.phase) {
       currentPhase = data.phase;
       setPhaseButtonHighlight();
+      syncOpencvModal(data.phase, ack);
     }
     var parts = [];
     if (data.phase) parts.push("phase=" + data.phase);
@@ -49,6 +79,9 @@
     if (data.dropped !== undefined) parts.push("dropped_total=" + data.dropped);
     if (data.paused !== undefined) parts.push("paused=" + data.paused);
     if (data.suite_running !== undefined) parts.push("suite=" + data.suite_running);
+    if (data.phase === "opencv" && data.opencv_acknowledged === false) {
+      parts.push("opencv=awaiting_OK");
+    }
     if (data.workload_ops !== undefined && data.workload_ops > 0) {
       parts.push("ops=" + data.workload_ops);
       if (data.workload_us_per_op !== undefined) parts.push("us/op=" + data.workload_us_per_op.toFixed(1));
@@ -156,6 +189,15 @@
   document.getElementById("btnCfgReset").addEventListener("click", function () {
     emit("config_reset", "");
   });
+
+  (function wireOpencvModal() {
+    var ok = document.getElementById("opencvModalOk");
+    if (ok) {
+      ok.addEventListener("click", function () {
+        emit("opencv_ack", "");
+      });
+    }
+  })();
 
   buildPhaseButtons();
   buildConfigFields();

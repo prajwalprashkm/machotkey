@@ -10,6 +10,6 @@
 // Global debug logging gate.
 // Set to 1 (e.g. via compiler defs or by editing here) to enable debug logs.
 #ifndef MHK_ENABLE_DEBUG_LOGS
-#define MHK_ENABLE_DEBUG_LOGS 0
+#define MHK_ENABLE_DEBUG_LOGS 1
 #endif
 

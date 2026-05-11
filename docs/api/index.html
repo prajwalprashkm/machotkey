@@ -354,6 +354,19 @@
     color: var(--accent);
   }
 
+  .module-note {
+    margin: 16px 0 24px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--accent-light);
+    border: 1px solid #c5d5f8;
+    border-radius: 6px;
+    max-width: 640px;
+  }
+  .module-note strong { font-weight: 600; }
+
   /* ── Hero ── */
   #hero {
     margin-bottom: 48px;
@@ -1214,6 +1227,16 @@ system.keyboard.type(system.keyboard.TypeMode.STRING, "paste-heavy payload")</pr
   <section class="module" id="module-system-opencv">
     <div class="module-title">system.opencv</div>
     <div class="module-desc">Load images and perform computer vision operations using OpenCV. Returns <code>Mat</code> objects for image processing.</div>
+
+    <div class="module-note">
+      <strong>CPU and resource limits:</strong>
+      OpenCV—especially <code>match_template</code>, pyramid search, and building <code>Mat</code>s from large screen buffers—can keep the macro runner at <strong>high CPU</strong> for long stretches.
+      In Machotkey’s host settings, use <strong>Runtime resource limits</strong>:
+      <strong>CPU throttle-at</strong> (manifest <code>cpu_throttle_percent</code>, or legacy <code>cpu_target_percent</code>) and
+      <strong>CPU hard-stop-at</strong> (<code>cpu_kill_percent</code>).
+      Keep the <strong>hard-stop (kill) limit well above</strong> the throttle line and use the throttle to cap how much CPU the macro is allowed to use.
+      If the kill limit is set near typical OpenCV usage, the runner may sit at or above that threshold and the macro will be <strong>stopped after about three seconds</strong>.
+    </div>
 
     <div class="entry" id="fn-opencv-load_from_file">
       <div class="entry-name"><span>system.opencv.load_from_file</span><span class="entry-kind fn">function</span></div>

@@ -17,7 +17,7 @@ This project is a **readable demo** of Machotkey macro APIs, shaped like **`macr
 | **ocr_fast** | **One** full-frame `recognize_text({})` per frame — timing reports that single OCR pass. |
 | **ocr_accurate** | **One** `ocr.accurate` full-frame pass per frame (timing = that pass). |
 | **input** | Batch `system.mouse.get_position` only (no synthetic mouse clicks). |
-| **opencv** | **One** pipeline per frame: crops, `to_opencv_mat` ×2, **one** `match_template` — timing is that full task. |
+| **opencv** | **One** pipeline per frame after you confirm the **OpenCV CPU** dialog in the panel (**OK**). Until then the phase is selected but no OpenCV work runs; the **suite** also waits on **OK** before its timer advances. |
 | **fs** | Several `system.fs.read_all("config.lua")` per frame (manifest allowlist). |
 
 Batched phases (**color**, **input**, **fs**) report **average µs per operation** across many calls. **OCR** and **OpenCV** run **one heavy task** per frame; `workload_ops` is **1** and **`workload_us_per_op`** equals that task’s duration in µs (same as **`workload_total_ms`** × 1000).
@@ -26,7 +26,7 @@ Metrics for the **current** phase are recomputed every **`METRICS_WINDOW_FRAMES`
 
 ## Full suite
 
-**Run full suite** walks phases in order (`idle` → `color` → … → `fs`), holding each for **`SUITE_PHASE_MS`** (default 2.8s) so numbers can stabilize. **Stop suite** cancels the timer chain.
+**Run full suite** walks phases in order (`idle` → `color` → … → `fs`), holding each for **`SUITE_PHASE_MS`** after that phase starts (for **opencv**, the clock for the next step starts only after you press **OK** on the CPU dialog). **Stop suite** cancels the timer chain.
 
 ## Files (skim order)
 

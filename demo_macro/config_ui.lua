@@ -149,6 +149,7 @@ function M.push_runtime(state)
   end
   local payload = {
     phase = state.phase,
+    opencv_acknowledged = state.opencv_acknowledged,
     fps = state.fps,
     latency_ms = state.latency_ms,
     raw_fps = state.raw_fps,
@@ -193,15 +194,38 @@ function M.setup(config, state)
     M.push_runtime(state)
   end)
 
+  local function complete_opencv_ack()
+    if state.phase ~= "opencv" then
+      return
+    end
+    state.opencv_acknowledged = true
+    local arm = state._suite_arm_after_opencv_ack
+    state._suite_arm_after_opencv_ack = nil
+    if type(arm) == "function" then
+      arm()
+    end
+    M.push_runtime(state)
+  end
+
   system.ui.on("set_phase", function(payload)
     local t = parse_kv_payload(payload)
     local p = t.phase
     if type(p) == "string" and p ~= "" then
       state.phase = p
       state.suite_running = false
+      state._suite_arm_after_opencv_ack = nil
+      if p == "opencv" then
+        state.opencv_acknowledged = false
+      else
+        state.opencv_acknowledged = true
+      end
       toast("Phase: " .. p, true)
       M.push_runtime(state)
     end
+  end)
+
+  system.ui.on("opencv_ack", function()
+    complete_opencv_ack()
   end)
 
   system.ui.on("run_suite", function()

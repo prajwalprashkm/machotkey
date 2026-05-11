@@ -52,10 +52,24 @@
         <li><strong>color</strong> — many <code>find_color</code> scans over the <strong>full capture frame</strong> (RGB/tolerance sweep).</li>
         <li><strong>ocr_fast</strong> / <strong>ocr_accurate</strong> — one full-frame <code>recognize_text</code> per frame (timing = that single pass).</li>
         <li><strong>input</strong> — <code>mouse.get_position</code> batch only (no synthetic clicks).</li>
-        <li><strong>opencv</strong> — one full-frame pipeline: Mats + a single <code>match_template</code> (timing = that task).</li>
+        <li><strong>opencv</strong> — one full-frame pipeline (Mats + <code>match_template</code>) <strong>after you press OK</strong> on the CPU warning; until then this phase is idle workload.</li>
         <li><strong>fs</strong> — repeated manifest <code>read_all</code> on <code>config.lua</code>.</li>
       </ul>
     </section>
+  </div>
+
+  <div id="opencvModal" class="modal-root" aria-hidden="true">
+    <div class="modal-backdrop" id="opencvModalBackdrop" tabindex="-1"></div>
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="opencvModalTitle">
+      <h3 id="opencvModalTitle">OpenCV is CPU-heavy</h3>
+      <div class="modal-body">
+        <p>OpenCV work (template matching, converting large buffers to <code>Mat</code>, etc.) can use a lot of CPU for sustained periods (over 100% usage of a single core).</p>
+        <p>In the main Machotkey app, open <strong>Settings</strong> and edit <strong>Runtime resource limits</strong>: <strong>CPU throttle-at</strong> and <strong>CPU hard-stop-at</strong> (also <code>cpu_throttle_percent</code> / <code>cpu_kill_percent</code> in your project <code>manifest.json</code>).</p>
+        <p><strong>Keep the hard-stop (kill) limit much higher than the throttle threshold</strong>, and use the throttle to control how much CPU the macro may use. If the kill limit is too low or too close to normal OpenCV load, the runner can sit at or above the kill line and the macro will be <strong>stopped after about 3 seconds</strong>.</p>
+        <p><strong>OpenCV work in this demo does not start until you press OK.</strong> The automated suite also waits here before advancing to the next phase.</p>
+      </div>
+      <button type="button" class="btn-primary modal-ok" id="opencvModalOk">OK</button>
+    </div>
   </div>
 
   <div id="toast" class="toast" role="status"></div>

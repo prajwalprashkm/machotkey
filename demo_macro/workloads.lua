@@ -103,7 +103,11 @@ function M.run_phase(state, config, ctx, phase)
   elseif phase == "input" then
     input_batch(config, state)
   elseif phase == "opencv" then
-    opencv_once(config, ctx, state)
+    if state.opencv_acknowledged then
+      opencv_once(config, ctx, state)
+    else
+      set_stats(state, 0, 0)
+    end
   elseif phase == "fs" then
     fs_batch(config, state)
   end
