@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 // dear imgui: Renderer Backend for Metal
 // This needs to be used along with a Platform Backend (e.g. OSX)
 

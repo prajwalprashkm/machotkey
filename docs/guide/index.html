@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Machotkey — Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f9f9f7;
+    --sidebar-bg: #f0f0ec;
+    --border: #d8d8d2;
+    --text: #1a1a18;
+    --text-muted: #6b6b65;
+    --accent: #2a5cdb;
+    --accent-light: #eef2fd;
+    --code-bg: #efefeb;
+    --tag-bg: #e4e4de;
+    --sidebar-w: 240px;
+    --content-max: 860px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #sidebar-header {
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  #sidebar-header h1 { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+  #sidebar-header p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  nav { padding: 6px 0 20px; }
+
+  .nav-section-label {
+    display: block;
+    padding: 10px 16px 3px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  nav a {
+    display: block;
+    padding: 5px 16px;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-left: 2px solid transparent;
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  nav a:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); font-weight: 500; }
+
+  nav a.page-link {
+    font-weight: 500;
+    color: var(--text);
+    font-size: 13px;
+  }
+  nav a.page-link:hover { background: rgba(0,0,0,0.04); }
+  nav a.page-link.current { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); }
+
+  /* ── Main ── */
+  #main {
+    flex: 1;
+    padding: 48px 48px 80px;
+    max-width: calc(var(--content-max) + 96px);
+  }
+
+  /* ── Guide sections ── */
+  .guide-section {
+    margin-bottom: 56px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+  }
+  .guide-section:last-child { border-bottom: none; }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .section-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 24px;
+    max-width: 600px;
+    line-height: 1.7;
+  }
+
+  /* ── Prose ── */
+  .prose {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    max-width: 640px;
+  }
+  .prose p { margin-bottom: 14px; }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .prose a { color: var(--accent); text-decoration: none; }
+  .prose a:hover { text-decoration: underline; }
+
+  /* ── Steps ── */
+  .doc-footer {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: var(--content-max);
+  }
+  .doc-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .doc-footer a:hover {
+    text-decoration: underline;
+  }
+
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  .step-body { flex: 1; min-width: 0; }
+  .step-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.6; }
+  .step-desc:last-child { margin-bottom: 0; }
+  .step-desc code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--text);
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    line-height: 1.65;
+    color: var(--text);
+    margin-top: 10px;
+  }
+
+  /* ── Tables ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 6px 12px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .data-table td {
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .data-table tr:nth-child(even) td { background: var(--code-bg); }
+  .data-table code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--tag-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .data-table td strong { font-weight: 600; }
+
+  /* ── Callout ── */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 5px;
+    background: var(--accent-light);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.65;
+    margin-top: 16px;
+  }
+  .callout code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: rgba(42,92,219,0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .callout-warn {
+    border-left-color: #c07000;
+    background: #fffbf0;
+  }
+
+  /* ── Perf table card ── */
+  .perf-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  /* ── Hero ── */
+  #hero { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+  #hero h2 { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+  #hero p { color: var(--text-muted); max-width: 560px; line-height: 1.7; font-size: 14px; }
+
+  /* scrollbar */
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <h1>Machotkey</h1>
+    <p>Documentation</p>
+  </div>
+  <nav>
+    <span class="nav-section-label">Pages</span>
+    <a href="../guide/" class="page-link current">Guide</a>
+    <a href="../api/" class="page-link">API Reference</a>
+
+    <span class="nav-section-label">On this page</span>
+    <a href="#overview">Overview</a>
+    <a href="#requirements">Requirements</a>
+    <a href="#installation">Installation</a>
+    <a href="#first-macro">Your first macro</a>
+    <a href="#performance">Performance</a>
+  </nav>
+</aside>
+
+<main id="main">
+
+  <div id="hero">
+    <h2>Getting Started</h2>
+    <p>Machotkey is a high-performance native macOS macro scripting application. Write macros in Lua (LuaJIT), automate keyboard and mouse input, capture and analyze the screen with OpenCV, and build UI panels through embedded WebKit views.</p>
+  </div>
+
+  <!-- ══════════════════════════════════ Overview ══ -->
+  <section class="guide-section" id="overview">
+    <div class="section-title">Overview</div>
+    <div class="prose">
+      <p>Machotkey splits privileges between two processes to keep scripting constrained while the host retains the capabilities needed for platform actions:</p>
+      <p><strong>machotkey</strong> is the main host process — it manages the UI, elevated OS capabilities, and mediates privileged operations on behalf of macros.</p>
+      <p><strong>macro_runner</strong> is a sandboxed child process that runs your Lua scripts and communicates with the host over IPC and shared memory. Malicious or buggy scripts are contained here.</p>
+      <p>Macros are directories containing at least a <a href="../api/#module-manifest"><code>manifest.json</code></a> file; however, virtually all macros also contain Lua files and other assets. The <a href="../api/">API Reference</a> covers every function available to scripts. A project's <a href="../api/#module-manifest"><code>manifest.json</code></a> declares its required/optional permissions, file access, runtime limits, and other metadata before execution begins. Machotkey also offers a minimal quick-script mode where users can run single-file Lua macros; however, this is <strong>not</strong> meant for production and is solely for quick testing, debugging, and exploration.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ Requirements ══ -->
+  <section class="guide-section" id="requirements">
+    <div class="section-title">Requirements</div>
+    <div class="section-desc">Machotkey targets Apple Silicon Macs running macOS Sonoma or later. Requirements differ slightly depending on whether you install from a release DMG or build from source.</div>
+
+    <div class="perf-card">
+      <table class="data-table">
+        <tr><th>Item</th><th>Detail</th></tr>
+        <tr>
+          <td><strong>Platform</strong></td>
+          <td>macOS 14.0 (Sonoma) or later</td>
+        </tr>
+        <tr>
+          <td><strong>CPU</strong></td>
+          <td>Apple Silicon (arm64). Intel Macs are not supported.</td>
+        </tr>
+        <tr>
+          <td><strong>RAM</strong></td>
+          <td>No hard minimum. The application itself typically uses under 200 MB; actual usage depends on the macros you run.</td>
+        </tr>
+        <tr>
+          <td><strong>Displays</strong></td>
+          <td>Multiple displays supported for capture and automation</td>
+        </tr>
+        <tr>
+          <td><strong>Toolchain</strong> <span style="font-size:11px;color:var(--text-muted)">(build from source only)</span></td>
+          <td>Xcode Command Line Tools or full Xcode (Clang + macOS SDK)</td>
+        </tr>
+        <tr>
+          <td><strong>CMake</strong> <span style="font-size:11px;color:var(--text-muted)">(build from source only)</span></td>
+          <td>Not included with Xcode tools — install via <a href="https://brew.sh">Homebrew</a> (<code>brew install cmake</code>) or from <a href="https://cmake.org/download/">cmake.org</a></td>
+        </tr>
+        <tr>
+          <td><strong>Git</strong> <span style="font-size:11px;color:var(--text-muted)">(build from source only)</span></td>
+          <td>Included with Xcode Command Line Tools. Submodule support required — dependencies are vendored under <code>project/libs/</code></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="callout" style="margin-top:16px">
+      Builds have been tested on an Apple M2 MacBook Air with 8 GB RAM. Other Apple Silicon Macs should work. The first source build takes longer than usual because OpenCV is compiled from source — expect it to be CPU- and memory-intensive.
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ Installation ══ -->
+  <section class="guide-section" id="installation">
+    <div class="section-title">Installation</div>
+    <div class="section-desc">There are two ways to install Machotkey. The DMG release is the easiest — no dependencies required. Building from source gives you the latest changes but requires a C++ toolchain.</div>
+
+    <!-- Tab-style method switcher -->
+    <div style="display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:6px;overflow:hidden;width:fit-content">
+      <button id="tab-dmg" onclick="showTab('dmg')" style="padding:8px 20px;font-family:inherit;font-size:13px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;transition:background 0.1s">DMG Release</button>
+      <button id="tab-source" onclick="showTab('source')" style="padding:8px 20px;font-family:inherit;font-size:13px;font-weight:500;border:none;border-left:1px solid var(--border);cursor:pointer;background:var(--code-bg);color:var(--text-muted);transition:background 0.1s">Build from Source</button>
+    </div>
+
+    <!-- DMG path -->
+    <div id="install-dmg">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Download the DMG</div>
+            <div class="step-desc">Grab the latest release from the <a href="https://github.com/prajwalprashkm/machotkey/releases">GitHub Releases page</a>. Download the <code>.dmg</code> file.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Open and install</div>
+            <div class="step-desc">Double-click the DMG, then drag <strong>Machotkey.app</strong> into your <strong>Applications</strong> folder.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Allow the app to run</div>
+            <div class="step-desc">Releases are unsigned. The first time you open Machotkey, macOS will block it. Go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down, and click <strong>Open Anyway</strong>. You only need to do this once.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Source path -->
+    <div id="install-source" style="display:none">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Install Xcode Command Line Tools</div>
+            <div class="step-desc">Provides Clang, the macOS SDK, <code>make</code>, and <code>git</code>. Run:</div>
+            <pre>xcode-select --install</pre>
+            <div class="step-desc" style="margin-top:10px">Alternatively, install the full <a href="https://apps.apple.com/app/xcode/id497799835">Xcode app</a> from the Mac App Store, which includes everything the command line tools provide.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Install CMake</div>
+            <div class="step-desc">CMake is <strong>not</strong> included with Xcode Command Line Tools and must be installed separately. The easiest way is via <a href="https://brew.sh">Homebrew</a>:</div>
+            <pre>brew install cmake</pre>
+            <div class="step-desc" style="margin-top:10px">If you prefer not to use Homebrew, download the macOS installer directly from <a href="https://cmake.org/download/">cmake.org/download</a> and follow the instructions there to add <code>cmake</code> to your PATH.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Clone the repository with submodules</div>
+            <div class="step-desc">Dependencies (OpenCV, LuaJIT, sol2, ImGui, etc.) are tracked as git submodules. Clone with <code>--recurse-submodules</code> to fetch them in one step:</div>
+            <pre>git clone --recurse-submodules https://github.com/prajwalprashkm/machotkey.git
+cd machotkey</pre>
+            <div class="step-desc" style="margin-top:10px">If you already cloned without the flag, run <code>git submodule update --init --recursive</code> from inside the repo.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Build with CMake</div>
+            <div class="step-desc">From the repository root, configure and build:</div>
+            <pre>mkdir build && cd build
+cmake ..
+cmake --build . -j 8</pre>
+            <div class="step-desc" style="margin-top:10px">Or as an equivalent out-of-tree build:</div>
+            <pre>cmake -S . -B build
+cmake --build build -j 8</pre>
+            <div class="step-desc" style="margin-top:10px">The <code>-j 8</code> flag sets the parallel job count — adjust it to match your CPU core count. The first build compiles OpenCV from source, which is significantly slower than subsequent incremental builds.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Run the app</div>
+            <div class="step-desc">After a successful build, the app bundle is at:</div>
+            <pre>build/bin/machotkey.app</pre>
+            <div class="step-desc" style="margin-top:10px">Source builds are unsigned. macOS may require you to allow the app in <strong>System Settings → Privacy &amp; Security</strong> the first time you open it.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-warn" style="margin-top:24px">
+      Machotkey requires several macOS permissions to function — <strong>Screen Recording</strong>, <strong>Accessibility</strong> (for keyboard and mouse control), and <strong>Input Monitoring</strong> (for listening to key combos). Grant these in <strong>System Settings → Privacy &amp; Security</strong> when prompted. Individual macros declare which permissions they need in their <a href="../api/#module-manifest"><code>manifest.json</code></a>.
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ First macro ══ -->
+  <section class="guide-section" id="first-macro">
+    <div class="section-title">Your first macro</div>
+    <div class="prose">
+      <p>Macros are directories containing at least a <a href="../api/#module-manifest"><code>manifest.json</code></a> file; however, virtually all macros also contain Lua files and other assets. Use the <a href="../api/">API Reference</a> to see the available API features and write your macro. The <a href="../api/#module-manifest"><code>manifest.json</code></a> declares the macro's required/optional permissions, file access, runtime limits, and other metadata before execution begins. Note that while a minimal quick-script mode is available and built into the application, it is not recommended and is only meant for quick exploration. Do <strong>not</strong> use it for production. For development, an external IDE such as VSCode with Lua language support is recommended.</p>
+    </div>
+    <br />
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Create a project folder</div>
+          <pre>mkdir my-macro && cd my-macro</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Write a manifest.json</div>
+          <div class="step-desc">Declare the entry point and the permissions your macro needs. Only <code>entry</code> is required.</div>
+          <pre>{
+  "name": "My Macro",
+  "version": "1.0.0",
+  "entry": "main.lua",
+  "permissions": [
+    { "name": "keyboard_control" },
+    { "name": "mouse_control" }
+  ]
+}</pre>
+          <div class="step-desc" style="margin-top:10px">See the <a href="../api/#module-manifest">manifest reference</a> for the full list of fields including file access rules and rate limits.</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Write your entry file</div>
+          <div class="step-desc">Create <code>main.lua</code>. The entire API is available under the global <code>system</code> table.</div>
+          <pre>-- Press Cmd+Shift+H to type "Hello, world!"
+system.on_key("cmd+shift+h", function()
+  system.keyboard.type(
+    system.keyboard.TypeMode.STRING,
+    "Hello, world!"
+  )
+end)</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Open the project in Machotkey</div>
+          <div class="step-desc">Launch <code>machotkey.app</code> and open your project folder. Machotkey will read the manifest, prompt for any permissions not yet granted, and start running your macro.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ Performance ══ -->
+  <section class="guide-section" id="performance">
+    <div class="section-title">Performance</div>
+    <div class="section-desc">Figures below are author-measured under a real macro workload (automating a CPU/GPU-heavy game with continuous screen capture and input). Treat them as representative, not universal — resolution, refresh rate, number of active capture displays, and script logic all affect your results.</div>
+
+    <div class="prose" style="margin-bottom:16px">
+      <p><strong>Test hardware:</strong> Apple M2 MacBook Air, 8 GB unified memory.</p>
+      <p><strong>Frame latency measurement:</strong> Latency is measured between the Mach timestamp attached to a frame by ScreenCaptureKit and the timestamp when that same frame becomes observable in Lua — isolating capture-to-delivery overhead rather than a synthetic microbenchmark.</p>
+      <p><strong>High-DPI note:</strong> "Full-frame" color search figures use a 2× Retina buffer at 2214×3420. Other resolutions scale cost proportionally.</p>
+    </div>
+
+    <div class="perf-card">
+      <table class="data-table">
+        <tr><th>Area</th><th>Result</th></tr>
+        <tr>
+          <td><strong>Frame pipeline latency</strong></td>
+          <td>Under <strong>0.2 ms</strong> typical — ScreenCaptureKit timestamp to Lua-observable frame, measured under the game automation workload</td>
+        </tr>
+        <tr>
+          <td><strong>Capture throughput</strong></td>
+          <td>Typically holds <strong>90%+ of the display refresh rate</strong>; often <strong>200+ FPS</strong> where the display supports it. Ceiling follows display refresh rate and system load.</td>
+        </tr>
+        <tr>
+          <td><strong>Color search</strong></td>
+          <td>~<strong>2 ms</strong> for a full-frame scan at 2214×3420 using the optimized search path (content-dependent)</td>
+        </tr>
+        <tr>
+          <td><strong>Input automation</strong></td>
+          <td>Low-latency synthesized keyboard and mouse events, suitable for interactive automation</td>
+        </tr>
+        <tr>
+          <td><strong>Application RAM overhead</strong></td>
+          <td>Typically under <strong>200 MB</strong> for the application itself; near zero for the macro runner process</td>
+        </tr>
+        <tr>
+          <td><strong>Sandboxing</strong></td>
+          <td>Seatbelt-style sandbox on the macro runner — buggy or malicious scripts are contained without affecting the host</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    <p>&copy; Prajwal Prashanth. This documentation is part of Machotkey. Project terms: <a href="../../LICENSE">LICENSE</a> · <a href="../../LEGAL.md">LEGAL.md</a> (guide).</p>
+  </footer>
+
+</main>
+
+<script>
+  function showTab(tab) {
+    const isDmg = tab === 'dmg';
+    document.getElementById('install-dmg').style.display = isDmg ? '' : 'none';
+    document.getElementById('install-source').style.display = isDmg ? 'none' : '';
+    document.getElementById('tab-dmg').style.background = isDmg ? 'var(--accent)' : 'var(--code-bg)';
+    document.getElementById('tab-dmg').style.color = isDmg ? '#fff' : 'var(--text-muted)';
+    document.getElementById('tab-source').style.background = isDmg ? 'var(--code-bg)' : 'var(--accent)';
+    document.getElementById('tab-source').style.color = isDmg ? 'var(--text-muted)' : '#fff';
+  }
+
+  // Active nav on scroll
+  const sections = document.querySelectorAll('.guide-section');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => e.target._visible = e.isIntersecting);
+    let topmost = null, topmostY = Infinity;
+    sections.forEach(s => {
+      if (s._visible) {
+        const y = s.getBoundingClientRect().top;
+        if (y < topmostY) { topmostY = y; topmost = s.id; }
+      }
+    });
+    if (topmost) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`nav a[href="#${topmost}"]`);
+      if (active) active.classList.add('active');
+    }
+  }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
+
+  sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

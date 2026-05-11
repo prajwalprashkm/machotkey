@@ -1,6 +1,6 @@
 {
-  "name": "Feature Demo Macro",
-  "version": "1.0",
+  "name": "Machotkey demo & benchmark",
+  "version": "2.0",
   "entry": "main.lua",
   "permissions": [
     { "name": "screen_capture", "optional": false },
@@ -12,12 +12,14 @@
     "main.lua",
     "config.lua",
     "config_user.lua",
+    "config_ui.lua",
     "state.lua",
     "geometry.lua",
     "color.lua",
+    "regions.lua",
+    "workloads.lua",
+    "suite.lua",
     "capture.lua",
-    "automation.lua",
-    "ui_controller.lua",
     "ui/index.html",
     "ui/styles.css",
     "ui/app.js"

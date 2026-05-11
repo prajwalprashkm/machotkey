@@ -2,9 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Bundle Identification -->
     <key>CFBundleIdentifier</key>
-    <string>com.machotkey.machotkey</string>
+    <string>com.prajwal-prashanth.machotkey</string>
     
     <key>CFBundleName</key>
     <string>Machotkey</string>
@@ -15,29 +14,24 @@
     <key>CFBundleExecutable</key>
     <string>machotkey</string>
     
-    <!-- Version Information -->
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     
-    <!-- Bundle Type -->
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     
     <key>CFBundleSignature</key>
     <string>????</string>
     
-    <!-- Minimum macOS Version -->
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     
-    <!-- Icon (if you have one) -->
     <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
+    <string>machotkey</string>
     
-    <!-- UI Configuration -->
     <key>NSHighResolutionCapable</key>
     <true/>
     
@@ -47,7 +41,6 @@
     <key>NSAppSleepDisabled</key>
     <true/>
     
-    <!-- Privacy Permissions -->
     <key>NSScreenCaptureUsageDescription</key>
     <string>MacHotkey needs screen capture access to record and analyze screen content for automation.</string>
     
@@ -57,31 +50,20 @@
     <key>NSAppleEventsUsageDescription</key>
     <string>MacHotkey needs to send Apple Events to control other applications.</string>
     
-    <key>NSCameraUsageDescription</key>
-    <string>MacHotkey needs camera access for image processing features.</string>
-
-    <key>NSMicrophoneUsageDescription</key>
-    <string>MacHotkey needs microphone access for audio processing features.</string>
-    
-    <!-- Supported Architectures -->
     <key>LSArchitecturePriority</key>
     <array>
         <string>arm64</string>
     </array>
     
-    <!-- App Category -->
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     
-    <!-- Allow JIT Compilation (for LuaJIT) -->
     <key>CSResourcesFileMapped</key>
     <true/>
     
-    <!-- Development Mode -->
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     
-    <!-- Copyright -->
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Machotkey. All rights reserved.</string>
 </dict>

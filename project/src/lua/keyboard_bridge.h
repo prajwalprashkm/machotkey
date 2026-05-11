@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "sol/sol.hpp"
 #include "input_interface.h"
 #include "sol/types.hpp"
@@ -7,6 +14,13 @@
 #include "shared.h"
 #include "ipc_protocol.h"
 #include "utils.h"
+#include "../../include/debug_config.h"
+
+#if MHK_ENABLE_DEBUG_LOGS
+#ifndef IPC_DEBUG
+#define IPC_DEBUG
+#endif
+#endif
 
 #define THROW_LUA_ERROR(s, msg) throw sol::error(get_current_location(s)+msg)
 

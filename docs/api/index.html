@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Machotkey API Reference</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f9f9f7;
+    --sidebar-bg: #f0f0ec;
+    --border: #d8d8d2;
+    --text: #1a1a18;
+    --text-muted: #6b6b65;
+    --accent: #2a5cdb;
+    --accent-light: #eef2fd;
+    --code-bg: #efefeb;
+    --tag-bg: #e4e4de;
+    --sidebar-w: 240px;
+    --content-max: 860px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #sidebar-header {
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #sidebar-header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  #sidebar-header p {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  #search {
+    margin: 10px 12px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    width: calc(100% - 24px);
+    outline: none;
+  }
+  #search:focus { border-color: var(--accent); }
+
+  nav { padding: 6px 0 20px; }
+
+  .nav-section-label {
+    display: block;
+    padding: 10px 16px 3px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Module-level row: toggle button + module link side by side */
+  .nav-module-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-module-toggle {
+    flex-shrink: 0;
+    width: 20px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0;
+    margin-left: 6px;
+    border-radius: 3px;
+    transition: color 0.1s, background 0.1s;
+  }
+  .nav-module-toggle:hover { color: var(--text); background: rgba(0,0,0,0.06); }
+  .nav-module-toggle svg { transition: transform 0.15s; display: block; }
+  .nav-module-toggle.open svg { transform: rotate(90deg); }
+
+  nav a {
+    display: block;
+    padding: 4px 16px;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    border-left: 2px solid transparent;
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  nav a:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); font-weight: 500; }
+
+  /* Sub-items (methods) */
+  .nav-sub {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.2s ease;
+  }
+  .nav-sub.open { max-height: 2000px; }
+
+  .nav-sub a {
+    font-size: 12px;
+    padding: 2px 16px 2px 30px;
+    color: var(--text-muted);
+    border-left: 2px solid transparent;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .nav-sub a:hover { color: var(--text); }
+  .nav-sub a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); font-weight: 400; }
+
+  /* ── Main ── */
+  #main {
+    flex: 1;
+    padding: 48px 48px 80px;
+    max-width: calc(var(--content-max) + 96px);
+  }
+
+  /* ── Module sections ── */
+  .module {
+    margin-bottom: 64px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+  }
+  .module:last-child { border-bottom: none; }
+
+  .module-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .module-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 28px;
+    max-width: 600px;
+  }
+
+  /* ── Entries ── */
+  .entry {
+    margin-bottom: 28px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+  }
+  .entry:last-child { margin-bottom: 0; }
+
+  .entry-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .entry-kind {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--tag-bg);
+    color: var(--text-muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .entry-kind.fn   { background: #e8f0fe; color: #1a4cc7; }
+  .entry-kind.cls  { background: #fce8ff; color: #7a1fa2; }
+  .entry-kind.enm  { background: #fff3e0; color: #a65000; }
+  .entry-kind.als  { background: #e8fce8; color: #2a7a2a; }
+  .entry-kind.fld  { background: var(--tag-bg); color: var(--text-muted); }
+  .entry-kind.prop { background: #fdecea; color: #b71c1c; }
+
+  .entry-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .params-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-top: 10px;
+  }
+  .params-table th {
+    text-align: left;
+    padding: 5px 10px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .params-table td {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .params-table tr:nth-child(even) td { background: var(--code-bg); }
+
+  code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--text);
+  }
+
+  .optional { color: var(--text-muted); font-style: italic; }
+
+  .overloads {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .overload {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 10px;
+    color: var(--text-muted);
+  }
+
+  .returns {
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .returns strong { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+  .enum-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .enum-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px 8px;
+  }
+  .enum-val span { color: var(--text-muted); }
+
+  .example {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .example + pre {
+    margin-top: 0;
+  }
+
+  pre.example-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    line-height: 1.6;
+    color: var(--text);
+    margin-top: 4px;
+  }
+
+  .section-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 14px 0 6px;
+  }
+
+  /* ── Type aliases ── */
+  .alias-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+  }
+  .alias-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--accent-light);
+    border: 1px solid #c5d5f8;
+    border-radius: 3px;
+    padding: 2px 8px;
+    color: var(--accent);
+  }
+
+  /* ── Hero ── */
+  #hero {
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  #hero h2 { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+  #hero p { color: var(--text-muted); max-width: 560px; line-height: 1.7; }
+
+  .hidden { display: none !important; }
+
+  /* ── Footer ── */
+  .doc-footer {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: var(--content-max);
+  }
+  .doc-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .doc-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* scrollbar */
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <h1>Machotkey</h1>
+    <p>API Reference</p>
+  </div>
+  <input id="search" type="text" placeholder="Search…" autocomplete="off">
+  <nav id="nav">
+    <span class="nav-section-label">Pages</span>
+    <a href="../guide/" style="font-weight:500;color:var(--text);font-size:13px;padding:5px 16px;display:block;text-decoration:none;border-left:2px solid transparent;">Guide</a>
+    <a href="../docs/" style="font-weight:500;color:var(--accent);background:var(--accent-light);border-left:2px solid var(--accent);font-size:13px;padding:5px 16px;display:block;text-decoration:none;">API Reference</a></nav>
+</aside>
+
+<main id="main">
+
+  <div id="hero">
+    <h2>Machotkey API Reference</h2>
+    <p>Complete reference for the Machotkey Lua scripting API. All modules are exposed under the global <code>system</code> table.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ system ══ -->
+  <section class="module" id="module-system">
+    <div class="module-title">system</div>
+    <div class="module-desc">Core utilities: key bindings, timing, tasks, and process control.</div>
+
+    <div class="entry" id="fn-on_key">
+      <div class="entry-name"><span>system.on_key</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Register a global hotkey. The callback fires whenever the key combination is pressed.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>combo</code></td><td><code>string</code></td><td>Key combination string, e.g. <code>"ctrl+shift+a"</code></td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ swallow?: boolean }</code> — if <code>swallow</code> is true, the keypress is not forwarded to other apps</td></tr>
+        <tr><td><code>callback</code></td><td><code>fun()</code></td><td>Function called when the combo is triggered</td></tr>
+      </table>
+      <div class="overloads">
+        <div class="overload">system.on_key(combo, callback)</div>
+        <div class="overload">system.on_key(combo, options, callback)</div>
+      </div>
+      <div class="example">Example</div>
+      <pre class="example-code">-- Simple hotkey
+system.on_key("cmd+shift+h", function()
+    print("triggered!")
+end)
+
+-- Swallow the keypress so other apps don't see it
+system.on_key("ctrl+f1", { swallow = true }, function()
+    system.mouse.click(system.mouse.Button.LEFT)
+end)</pre>
+    </div>
+
+    <div class="entry" id="fn-remove_keybind">
+      <div class="entry-name"><span>system.remove_keybind</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Remove a previously registered hotkey.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>combo</code></td><td><code>string</code></td><td>The key combination to unregister</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.on_key("cmd+shift+h", function() print("hello") end)
+-- later...
+system.remove_keybind("cmd+shift+h")</pre>
+    </div>
+
+    <div class="entry" id="fn-wait">
+      <div class="entry-name"><span>system.wait</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Pause execution for the given duration. If <code>unit</code> is omitted, values are interpreted as <strong>seconds</strong>.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>time</code></td><td><code>number</code></td><td>Duration to wait</td></tr>
+        <tr><td><code>unit</code> <span class="optional">(optional)</span></td><td><code>"s" | "ms" | "us"</code></td><td>Time unit. If omitted, <code>time</code> is in <strong>seconds</strong>.</td></tr>
+      </table>
+      <div class="overloads">
+        <div class="overload">system.wait(time)</div>
+        <div class="overload">system.wait(time, unit)</div>
+      </div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.wait(0.5)        -- wait half a second (default unit is seconds)
+system.wait(250, "ms")  -- wait 250 milliseconds
+system.wait(2, "s")     -- wait 2 seconds explicitly
+system.wait(100, "us") -- wait 100 microseconds</pre>
+    </div>
+
+    <div class="entry" id="fn-get_time">
+      <div class="entry-name"><span>system.get_time</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns a monotonic time value from when the runner started tracking. Omitting <code>unit</code> returns <strong>seconds</strong> (floating point).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>unit</code> <span class="optional">(optional)</span></td><td><code>"s" | "ms" | "us"</code></td><td>Time unit for the return value. Defaults to <code>"s"</code> if omitted.</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>number</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local start = system.get_time("ms")
+system.wait(100, "ms")
+local elapsed = system.get_time("ms") - start
+print("elapsed ms: " .. elapsed)</pre>
+    </div>
+
+    <div class="entry" id="fn-set_timeout">
+      <div class="entry-name"><span>system.set_timeout</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Schedule a callback to run once after a delay. Uses the same time rules as <code>system.wait</code> (<code>time</code> is in seconds if <code>unit</code> is omitted).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>callback</code></td><td><code>fun()</code></td><td>Function to call after the delay</td></tr>
+        <tr><td><code>time</code></td><td><code>number</code></td><td>Delay duration (seconds if <code>unit</code> omitted)</td></tr>
+        <tr><td><code>unit</code> <span class="optional">(optional)</span></td><td><code>"s" | "ms" | "us"</code></td><td>Time unit</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>integer</code> — timer ID</div>
+      <div class="example">Example</div>
+      <pre class="example-code">local id = system.set_timeout(function()
+    print("fired after 1 second")
+end, 1) -- omitting unit ⇒ seconds</pre>
+    </div>
+
+    <div class="entry" id="fn-clear_timeout">
+      <div class="entry-name"><span>system.clear_timeout</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Cancel a pending timeout before it fires.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>timer_id</code></td><td><code>integer</code></td><td>ID returned by <code>system.set_timeout</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">local id = system.set_timeout(function() print("hi") end, 5, "s")
+system.clear_timeout(id) -- cancelled before it fires</pre>
+    </div>
+
+    <div class="entry" id="fn-set_interval">
+      <div class="entry-name"><span>system.set_interval</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Schedule a callback to run repeatedly at a fixed interval. Uses the same time rules as <code>system.wait</code>. Returns a timer ID that can be cancelled.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>callback</code></td><td><code>fun()</code></td><td>Function to call on each interval</td></tr>
+        <tr><td><code>time</code></td><td><code>number</code></td><td>Interval duration (seconds if <code>unit</code> omitted)</td></tr>
+        <tr><td><code>unit</code> <span class="optional">(optional)</span></td><td><code>"s" | "ms" | "us"</code></td><td>Time unit</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>integer</code> — timer ID</div>
+      <div class="example">Example</div>
+      <pre class="example-code">local id = system.set_interval(function()
+    print("tick")
+end, 500, "ms") -- repeat every 500 ms</pre>
+    </div>
+
+    <div class="entry" id="fn-clear_interval">
+      <div class="entry-name"><span>system.clear_interval</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Stop a running interval.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>timer_id</code></td><td><code>integer</code></td><td>ID returned by <code>system.set_interval</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">local id = system.set_interval(function() print("tick") end, 500, "ms")
+system.wait(3, "s")
+system.clear_interval(id)</pre>
+    </div>
+
+    <div class="entry" id="fn-save_frame">
+      <div class="entry-name"><span>system.save_frame</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Save a pixel buffer to disk as an image file.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>buffer</code></td><td><code>PixelBuffer</code></td><td>Pixel data to save</td></tr>
+        <tr><td><code>filename</code></td><td><code>string</code></td><td>Output file path</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.begin_capture()
+system.screen.wait_until_ready()
+system.screen.get_next_frame() -- blocks until frame index advances
+system.save_frame(system.screen.buffer, "capture.png")
+-- Or save the active frame directly:
+system.screen.save_frame("capture.png")</pre>
+    </div>
+
+    <div class="entry" id="fn-exit">
+      <div class="entry-name"><span>system.exit</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Terminate the script process.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>exit_code</code> <span class="optional">(optional)</span></td><td><code>integer</code></td><td>Process exit code. Defaults to 0.</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.on_key("cmd+q", function()
+    system.exit(0)
+end)</pre>
+    </div>
+
+
+  </section>
+
+  <!-- ═══════════════════════════════════════ system.stats ══ -->
+  <section class="module" id="module-system-stats">
+    <div class="module-title">system.stats</div>
+    <div class="module-desc">Query CPU and memory usage of the current process.</div>
+
+    <div class="entry" id="fn-stats-get_info">
+      <div class="entry-name"><span>system.stats.get_info</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns a snapshot of current resource usage.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>unit</code> <span class="optional">(optional)</span></td><td><code>"b" | "kb" | "mb" | "gb"</code></td><td>Unit for <code>ram</code> and <code>vmem</code>. Defaults to <code>"gb"</code> if omitted.</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>StatsInfo</code> — <code>{ cpu: number, ram: number, vmem: number }</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local info = system.stats.get_info("mb")
+print(string.format("CPU: %.1f%%  RAM: %.1f MB", info.cpu, info.ram))</pre>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ system.permissions ══ -->
+  <section class="module" id="module-system-permissions">
+    <div class="module-title">system.permissions</div>
+    <div class="module-desc">Check OS-level permission grants required by the API.</div>
+
+    <div class="entry" id="fn-permissions-get">
+      <div class="entry-name"><span>system.permissions.get</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Query one or all permission states. Pass a name for a single boolean result, or omit to get all states as a table.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>permission</code> <span class="optional">(optional)</span></td><td><code>PermissionName</code></td><td><code>"screen_capture"</code>, <code>"keyboard_listen"</code>, <code>"keyboard_control"</code>, <code>"mouse_control"</code>, or a custom string</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code> (single) or <code>PermissionState</code> (all)</div>
+      <div class="overloads">
+        <div class="overload">system.permissions.get() → PermissionState</div>
+        <div class="overload">system.permissions.get(permission) → boolean</div>
+      </div>
+      <div class="example">Example</div>
+      <pre class="example-code">if system.permissions.get("screen_capture") then
+    system.screen.begin_capture()
+end
+
+-- Check all at once
+local perms = system.permissions.get()
+print(perms["keyboard_control"]) -- true or false</pre>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════ system.ui ══ -->
+  <section class="module" id="module-system-ui">
+    <div class="module-title">system.ui</div>
+    <div class="module-desc">Create and manage native webview windows for building UI overlays.</div>
+
+    <div class="entry" id="fn-ui-open">
+      <div class="entry-name"><span>system.ui.open</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Open a new window loading the given HTML file path.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>Path to an HTML file to load in the window</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ title?, x?, y?, width?, height?, w?, h? }</code></td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>UIWindowHandle</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local win = system.ui.open("panel.html", { title = "Control Panel", width = 400, height = 300 })
+win:center()</pre>
+    </div>
+
+    <div class="entry" id="fn-ui-close">
+      <div class="entry-name"><span>system.ui.close</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Close a window by ID. If omitted, closes the most recently opened window (not every window).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>window_id</code> <span class="optional">(optional)</span></td><td><code>integer</code></td><td>Explicit window ID. Omit to close the latest opened window tracked by the runtime.</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">win:close()               -- closes this window
+system.ui.close(win._id)  -- same via global API</pre>
+    </div>
+
+    <div class="entry" id="fn-ui-run_js">
+      <div class="entry-name"><span>system.ui.run_js</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Execute JavaScript in a window's webview context.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>js</code></td><td><code>string</code></td><td>JavaScript code to execute</td></tr>
+        <tr><td><code>window_id</code> <span class="optional">(optional)</span></td><td><code>integer</code></td><td>Target window. Omit to use the most recently opened window.</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.ui.run_js('document.getElementById("status").textContent = "Running"')
+
+-- With a handle returned from system.ui.open:
+win:run_js("document.title = 'Machotkey'")</pre>
+    </div>
+
+    <div class="entry" id="fn-ui-on">
+      <div class="entry-name"><span>system.ui.on</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Listen for events emitted from a webview window (e.g. via <code>window.__machotkey.emit</code>).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>event</code></td><td><code>string</code></td><td>Event name to listen for</td></tr>
+        <tr><td><code>callback</code></td><td><code>fun(payload: string, window_id: integer)</code></td><td>Handler receiving the event payload and the originating window ID</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.ui.on("button_clicked", function(payload, win_id)
+    print("Button clicked in window " .. win_id .. " payload: " .. payload)
+end)</pre>
+    </div>
+
+    <div class="entry" id="fn-ui-off">
+      <div class="entry-name"><span>system.ui.off</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Remove a previously registered UI event listener.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>event</code></td><td><code>string</code></td><td>Event name to stop listening to</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.ui.off("button_clicked")</pre>
+    </div>
+
+    <div class="section-header">UIWindowHandle methods</div>
+    <div class="entry">
+      <div class="entry-desc">A handle returned by <code>system.ui.open</code>. All methods operate on the specific window.</div>
+      <table class="params-table">
+        <tr><th>Method</th><th>Signature</th><th>Description</th></tr>
+        <tr><td><code>run_js</code></td><td><code>(js: string)</code></td><td>Execute JavaScript in this window</td></tr>
+        <tr><td><code>close</code></td><td><code>()</code></td><td>Close this window</td></tr>
+        <tr><td><code>set_title</code></td><td><code>(title: string)</code></td><td>Set the window title</td></tr>
+        <tr><td><code>set_size</code></td><td><code>(width, height: integer)</code></td><td>Resize the window</td></tr>
+        <tr><td><code>set_position</code></td><td><code>(x, y: integer)</code></td><td>Move the window</td></tr>
+        <tr><td><code>center</code></td><td><code>()</code></td><td>Center the window on screen</td></tr>
+        <tr><td><code>show</code></td><td><code>()</code></td><td>Make the window visible</td></tr>
+        <tr><td><code>hide</code></td><td><code>()</code></td><td>Hide the window without closing it</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">win:set_title("Macros")
+win:set_size(420, 320)
+win:set_position(80, 120)
+win:center()
+win:run_js("console.log('hello from Lua bridge')")
+win:hide()
+win:show()</pre>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════ system.screen ══ -->
+  <section class="module" id="module-system-screen">
+    <div class="module-title">system.screen</div>
+    <div class="module-desc">Screen capture, frame access, display enumeration, and color searching. Capture must be started with <code>begin_capture</code> before reading frames.</div>
+
+    <div class="entry">
+      <div class="entry-name"><span>Properties</span><span class="entry-kind prop">read-only</span></div>
+      <table class="params-table">
+        <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>ready</code></td><td><code>boolean</code></td><td>True once the capture pipeline is initialized</td></tr>
+        <tr><td><code>width</code></td><td><code>number</code></td><td>Captured frame width in pixels</td></tr>
+        <tr><td><code>height</code></td><td><code>number</code></td><td>Captured frame height in pixels</td></tr>
+        <tr><td><code>stride</code></td><td><code>number</code></td><td>Row stride of the frame buffer in bytes</td></tr>
+        <tr><td><code>index</code></td><td><code>number</code></td><td>Current frame index</td></tr>
+        <tr><td><code>timestamp</code></td><td><code>number</code></td><td>Timestamp of the current frame</td></tr>
+        <tr><td><code>buffer</code></td><td><code>PixelBuffer</code></td><td>Raw pixel data of the current frame</td></tr>
+      </table>
+    </div>
+
+    <div class="entry" id="fn-screen-wait_until_ready">
+      <div class="entry-name"><span>system.screen.wait_until_ready</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Block until the screen capture pipeline is ready to deliver frames.</div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.begin_capture()
+system.screen.wait_until_ready()
+print(system.screen.width, system.screen.height)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-get_dimensions">
+      <div class="entry-name"><span>system.screen.get_dimensions</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns the width and height of the captured area.</div>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>number width, number height</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local w, h = system.screen.get_dimensions()
+print("capture size", w, h)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-get_current_timestamp">
+      <div class="entry-name"><span>system.screen.get_current_timestamp</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns the current media time in microseconds (<code>CACurrentMediaTime() × 1,000,000</code>).</div>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>number</code> — microseconds</div>
+      <div class="example">Example</div>
+      <pre class="example-code">local us = system.screen.get_current_timestamp()
+print("media time µs:", us)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-begin_capture">
+      <div class="entry-name"><span>system.screen.begin_capture</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Start screen capture. Accepts optional <code>options</code> table and/or per-frame <code>callback</code> in either order.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ fps?: integer, region?: Rect, display_id?: integer }</code></td></tr>
+        <tr><td><code>callback</code> <span class="optional">(optional)</span></td><td><code>fun()</code></td><td>Called on each new frame</td></tr>
+      </table>
+      <div class="overloads">
+        <div class="overload">system.screen.begin_capture()</div>
+        <div class="overload">system.screen.begin_capture(options)</div>
+        <div class="overload">system.screen.begin_capture(callback)</div>
+        <div class="overload">system.screen.begin_capture(callback, options)</div>
+        <div class="overload">system.screen.begin_capture(options, callback)</div>
+      </div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.begin_capture({
+  fps = 60,
+  display_id = system.screen.get_displays()[1].id,
+  region = { x = 0, y = 0, w = 800, h = 600 },
+}, function()
+  -- runs every new frame
+end)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-stop_capture">
+      <div class="entry-name"><span>system.screen.stop_capture</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Stop the active screen capture session.</div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.stop_capture()</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-get_displays">
+      <div class="entry-name"><span>system.screen.get_displays</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns information about all connected displays.</div>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>Display[]</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">for i, d in ipairs(system.screen.get_displays()) do
+  print(i, d.id, d.w, d.h, d.is_main)
+end</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-get_main_display">
+      <div class="entry-name"><span>system.screen.get_main_display</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns geometry and timing info for the primary display. Prefer <code>get_displays</code> when you need a definitive <code>id</code> field for every connected screen.</div>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>Display</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local main = system.screen.get_main_display()
+print("main", main.w, main.h, main.scale)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-get_display">
+      <div class="entry-name"><span>system.screen.get_display</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns information about a specific display by ID.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>id</code></td><td><code>integer</code></td><td>Display ID from <code>get_displays</code></td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>Display</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local id = system.screen.get_displays()[1].id
+local d = system.screen.get_display(id)
+print(d.x, d.y, d.w, d.h)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-get_next_frame">
+      <div class="entry-name"><span>system.screen.get_next_frame</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Wait until the shared frame index advances (new frame available). Outside a cooperative context (plain top-level script code) this polls in a tight loop. Inside scheduled callbacks—hotkey handlers, timers, or UI events—the runtime yields between polls and <code>timeout_ms</code> is honored (default <code>1000</code> ms).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>timeout_ms</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>Maximum wait in milliseconds (coroutine/task path only; default <code>1000</code>)</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;Cooperative context: <code>true</code>, or <code>false, "timeout"</code>. Plain top-level synchronous calls return only <code>true</code> once a new frame arrives.</div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.wait_until_ready()
+while true do
+  local ok, err = system.screen.get_next_frame(500)
+  if not ok then break end -- timeout in coroutine
+  local pt = system.screen.find_color(255, 0, 0, 0, { x = 0, y = 0, w = 400, h = 300 })
+end</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-find_color">
+      <div class="entry-name"><span>system.screen.find_color</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Search the current frame for a pixel matching the given RGB color. Returns the first match position or <code>nil</code>.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>r, g, b</code></td><td><code>number</code></td><td>Target color components (0–255)</td></tr>
+        <tr><td><code>tolerance</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>Per-channel tolerance for fuzzy matching</td></tr>
+        <tr><td><code>rect</code> <span class="optional">(optional)</span></td><td><code>Rect</code></td><td>Search region. Searches entire frame if omitted.</td></tr>
+        <tr><td><code>reverse</code> <span class="optional">(optional)</span></td><td><code>boolean</code></td><td>Search right-to-left</td></tr>
+        <tr><td><code>reverse_vertical</code> <span class="optional">(optional)</span></td><td><code>boolean</code></td><td>Search bottom-to-top</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>Point|nil</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">-- exact red; or pass a region as 4th arg when skipping tolerance
+local p = system.screen.find_color(255, 0, 0, { x = 100, y = 100, w = 200, h = 200 })
+if p then system.mouse.move(p.x, p.y) end
+
+-- fuzzy match (tolerance then rect)
+local p2 = system.screen.find_color(200, 200, 200, 20, nil, false, false)</pre>
+    </div>
+
+    <div class="entry" id="fn-screen-save_frame">
+      <div class="entry-name"><span>system.screen.save_frame</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Save the current captured frame buffer to an image file.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>filename</code></td><td><code>string</code></td><td>Output file path</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.wait_until_ready()
+system.screen.save_frame("frame.png")</pre>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════ system.screen.canvas ══ -->
+  <section class="module" id="module-system-screen-canvas">
+    <div class="module-title">system.screen.canvas</div>
+    <div class="module-desc">Draw overlay shapes and text on the screen. Colors are RGBA packed as a 32-bit integer: <code>0xRRGGBBAA</code>.</div>
+
+    <div class="entry" id="fn-canvas-rect">
+      <div class="entry-name"><span>system.screen.canvas.rect</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Draw a rectangle on the overlay.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>rect</code></td><td><code>Rect</code></td><td>Position and size <code>{ x, y, w, h }</code></td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA packed color, e.g. <code>0xFF0000FF</code></td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, fill?: integer, classes?: string[] }</code> — pass <code>classes</code> as a sequential Lua array of strings</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">-- semi-transparent red outline, optional opaque fill inside
+system.screen.canvas.rect(
+  { x = 120, y = 80, w = 240, h = 120 },
+  0xFF3333DD,
+  { id = "hud", thickness = 2.0, fill = 0xFF333366, classes = { "overlay" } }
+)</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-text">
+      <div class="entry-name"><span>system.screen.canvas.text</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Draw text on the overlay at a screen position.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>text</code></td><td><code>string</code></td><td>Text content to display</td></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Screen coordinates</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA packed color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.text("Hello", 64, 64, 0xFFFFFFEE)</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-line">
+      <div class="entry-name"><span>system.screen.canvas.line</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Draw a line between two screen coordinates.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x1, y1</code></td><td><code>number</code></td><td>Start point</td></tr>
+        <tr><td><code>x2, y2</code></td><td><code>number</code></td><td>End point</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA packed color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.line(0, 0, 500, 500, 0x00FFFFFF, { thickness = 4.0 })</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-remove_by_id">
+      <div class="entry-name"><span>system.screen.canvas.remove_by_id</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Remove a specific canvas element by its ID.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>id</code></td><td><code>string</code></td><td>ID assigned when the element was drawn</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.remove_by_id("hud")</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-remove_by_classes">
+      <div class="entry-name"><span>system.screen.canvas.remove_by_classes</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Remove all canvas elements that have any of the given class names.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>classes</code></td><td><code>string[]</code></td><td>List of class names to match</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.remove_by_classes({ "overlay", "debug" })</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-clear">
+      <div class="entry-name"><span>system.screen.canvas.clear</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Remove all elements from the canvas overlay.</div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.clear()</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-set_display">
+      <div class="entry-name"><span>system.screen.canvas.set_display</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Choose which display to render the canvas overlay on.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>display_id</code></td><td><code>integer</code></td><td>Display ID from <code>system.screen.get_displays</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">local target = nil
+for _, d in ipairs(system.screen.get_displays()) do
+  if not d.is_main then target = d break end
+end
+if target then
+  system.screen.canvas.set_display(target.id)
+end</pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ system.screen.ocr ══ -->
+  <section class="module" id="module-system-screen-ocr">
+    <div class="module-title">system.screen.ocr</div>
+    <div class="module-desc">Optical character recognition on screen frames or pixel buffers. Two backends are available: <code>fast</code> (lower accuracy, higher speed) and <code>accurate</code> (higher accuracy, slower).</div>
+
+    <div class="entry" id="fn-ocr-fast">
+      <div class="entry-name"><span>system.screen.ocr.fast.recognize_text</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Run fast OCR on the current frame or a provided buffer.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>buffer</code> <span class="optional">(optional)</span></td><td><code>PixelBuffer</code></td><td>Pixel buffer to scan. Uses current frame if omitted.</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ region?: Rect }</code> — limit scan to a sub-region</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>OCRVector</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.wait_until_ready()
+local words = system.screen.ocr.fast.recognize_text({
+  region = { x = 0, y = 0, w = 640, h = 200 },
+})
+for i = 1, #words do
+  local seg = words[i]
+  print(seg.text, seg.confidence, seg.x, seg.y)
+end
+
+local hit = words:find("Save")
+if hit then
+  print("found at", hit.x, hit.y)
+end</pre>
+    </div>
+
+    <div class="entry" id="fn-ocr-accurate">
+      <div class="entry-name"><span>system.screen.ocr.accurate.recognize_text</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Run accurate OCR on the current frame or a provided buffer. Same signature as the fast variant.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>buffer</code> <span class="optional">(optional)</span></td><td><code>PixelBuffer</code></td><td>Pixel buffer to scan. Uses current frame if omitted.</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ region?: Rect }</code></td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>OCRVector</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.wait_until_ready()
+local buf = system.screen.buffer
+local refined = system.screen.ocr.accurate.recognize_text(buf)</pre>
+    </div>
+
+    <div class="section-header">OCRVector</div>
+    <div class="entry">
+      <div class="entry-desc">The result type returned by both OCR functions. Behaves as an array of <code>OCRResult</code> and supports Lua's <code>#</code> length operator.</div>
+      <div class="example">Example</div>
+      <pre class="example-code">local v = system.screen.ocr.fast.recognize_text()
+local n = tonumber(v.size) or #v
+local first = n >= 1 and v[1] or nil</pre>
+      <table class="params-table">
+        <tr><th>Member</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>size</code></td><td><code>integer</code></td><td>Number of recognized text regions</td></tr>
+        <tr><td><code>[i]</code></td><td><code>OCRResult</code></td><td>Access individual results by 1-based index</td></tr>
+        <tr><td><code>:find(target)</code></td><td><code>fun(string): OCRResult|nil</code></td><td>Search results for a string and return the matching entry, or <code>nil</code></td></tr>
+      </table>
+    </div>
+
+    <div class="section-header">OCRResult fields</div>
+    <div class="entry">
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>text</code></td><td><code>string</code></td><td>Recognized text string</td></tr>
+        <tr><td><code>confidence</code></td><td><code>number</code></td><td>Recognition confidence (0.0–1.0)</td></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Top-left position of the text region</td></tr>
+        <tr><td><code>w, h</code></td><td><code>number</code></td><td>Width and height of the text region</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════ system.mouse ══ -->
+  <section class="module" id="module-system-mouse">
+    <div class="module-title">system.mouse</div>
+    <div class="module-desc">Simulate and query mouse input.</div>
+
+    <div class="entry">
+      <div class="entry-name"><span>system.mouse.Button</span><span class="entry-kind enm">enum</span></div>
+      <div class="entry-desc">Mouse button identifiers for use with <code>click</code> and <code>send</code>.</div>
+      <div class="enum-values">
+        <div class="enum-val">LEFT <span>= -3</span></div>
+        <div class="enum-val">RIGHT <span>= -2</span></div>
+        <div class="enum-val">MIDDLE <span>= -1</span></div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>system.mouse.EventType</span><span class="entry-kind enm">enum</span></div>
+      <div class="entry-desc">Mouse button event types for use with <code>send</code>.</div>
+      <div class="enum-values">
+        <div class="enum-val">DOWN <span>= -2</span></div>
+        <div class="enum-val">UP <span>= -1</span></div>
+      </div>
+    </div>
+
+    <div class="entry" id="fn-mouse-move">
+      <div class="entry-name"><span>system.mouse.move</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Move the mouse cursor to an absolute screen position. Optionally animate the movement over a duration.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Target screen coordinates</td></tr>
+        <tr><td><code>duration</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>Animated move duration in milliseconds</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.mouse.move(1280 / 2, 800 / 2)
+system.mouse.move(640, 400, 200) -- glide for 200 ms</pre>
+    </div>
+
+    <div class="entry" id="fn-mouse-click">
+      <div class="entry-name"><span>system.mouse.click</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Click a mouse button, optionally at a specific position or a number of times.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>button</code></td><td><code>integer</code></td><td>A <code>system.mouse.Button</code> value</td></tr>
+        <tr><td><code>x</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>Click X coordinate (moves mouse first)</td></tr>
+        <tr><td><code>y</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>Click Y coordinate</td></tr>
+        <tr><td><code>clicks</code> <span class="optional">(optional)</span></td><td><code>integer</code></td><td>Number of times to click. Defaults to 1.</td></tr>
+      </table>
+      <div class="overloads">
+        <div class="overload">system.mouse.click(button)</div>
+        <div class="overload">system.mouse.click(button, clicks)</div>
+        <div class="overload">system.mouse.click(button, x, y)</div>
+        <div class="overload">system.mouse.click(button, x, y, clicks)</div>
+      </div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.mouse.click(system.mouse.Button.LEFT)
+system.mouse.click(system.mouse.Button.LEFT, 2) -- double click in place
+system.mouse.click(system.mouse.Button.RIGHT, 300, 200, 1)</pre>
+    </div>
+
+    <div class="entry" id="fn-mouse-send">
+      <div class="entry-name"><span>system.mouse.send</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Send a raw mouse button event (down or up) at an optional position.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>button</code></td><td><code>integer</code></td><td>A <code>system.mouse.Button</code> value</td></tr>
+        <tr><td><code>event_type</code></td><td><code>integer</code></td><td>A <code>system.mouse.EventType</code> value</td></tr>
+        <tr><td><code>x</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>X coordinate</td></tr>
+        <tr><td><code>y</code> <span class="optional">(optional)</span></td><td><code>number</code></td><td>Y coordinate</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.mouse.send(system.mouse.Button.LEFT, system.mouse.EventType.DOWN)
+system.wait(0.05)
+system.mouse.send(system.mouse.Button.LEFT, system.mouse.EventType.UP)
+
+system.mouse.send(system.mouse.Button.LEFT, system.mouse.EventType.DOWN, 440, 300)</pre>
+    </div>
+
+    <div class="entry" id="fn-mouse-get_position">
+      <div class="entry-name"><span>system.mouse.get_position</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Returns the current cursor position.</div>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>number x, number y</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local x, y = system.mouse.get_position()
+print(string.format("%.1f %.1f", x, y))</pre>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ system.keyboard ══ -->
+  <section class="module" id="module-system-keyboard">
+    <div class="module-title">system.keyboard</div>
+    <div class="module-desc">Simulate keyboard input — individual key events or typed text.</div>
+
+    <div class="entry">
+      <div class="entry-name"><span>system.keyboard.EventType</span><span class="entry-kind enm">enum</span></div>
+      <div class="entry-desc">Key event types for use with <code>send</code>.</div>
+      <div class="enum-values">
+        <div class="enum-val">DOWN <span>= -2</span></div>
+        <div class="enum-val">UP <span>= -1</span></div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>system.keyboard.TypeMode</span><span class="entry-kind enm">enum</span></div>
+      <div class="entry-desc">Typing strategy for <code>system.keyboard.type</code>.</div>
+      <div class="enum-values">
+        <div class="enum-val">SEQUENTIAL <span>= -2</span></div>
+        <div class="enum-val">STRING <span>= -1</span></div>
+      </div>
+    </div>
+
+    <div class="entry" id="fn-keyboard-press">
+      <div class="entry-name"><span>system.keyboard.press</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Send a key-down plus key-up for one key only. Parsing matches hotkey strings; multi-key combos are rejected — build them with sequential <code>system.keyboard.send</code> calls.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>key</code></td><td><code>string</code></td><td>Single key name, for example <code>"return"</code>, <code>"a"</code>, <code>"space"</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.keyboard.press("space")</pre>
+    </div>
+
+    <div class="entry" id="fn-keyboard-send">
+      <div class="entry-name"><span>system.keyboard.send</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Send a raw key event of a specific type.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>event_type</code></td><td><code>integer</code></td><td>A <code>system.keyboard.EventType</code> value</td></tr>
+        <tr><td><code>key</code></td><td><code>string</code></td><td>Exactly one logical key (<code>"a"</code>, <code>"return"</code>, <code>"space"</code>, …).</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.keyboard.send(system.keyboard.EventType.DOWN, "a")
+system.keyboard.send(system.keyboard.EventType.UP, "a")
+
+-- Modifiers/chords must be synthesized with successive calls (one key per invocation).
+system.keyboard.send(system.keyboard.EventType.DOWN, "shift")
+system.keyboard.send(system.keyboard.EventType.DOWN, "z")
+system.keyboard.send(system.keyboard.EventType.UP, "z")
+system.keyboard.send(system.keyboard.EventType.UP, "shift")</pre>
+    </div>
+
+    <div class="entry" id="fn-keyboard-type">
+      <div class="entry-name"><span>system.keyboard.type</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Type a string of text. <code>SEQUENTIAL</code> taps each character individually; <code>STRING</code> injects the text as a clipboard paste-like event.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>mode</code></td><td><code>integer</code></td><td>A <code>system.keyboard.TypeMode</code> value</td></tr>
+        <tr><td><code>text</code></td><td><code>string</code></td><td>Text to type</td></tr>
+        <tr><td><code>interval_ms</code> <span class="optional">(optional)</span></td><td><code>integer</code></td><td>Delay between characters in milliseconds (SEQUENTIAL mode only)</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.keyboard.type(system.keyboard.TypeMode.SEQUENTIAL, "hello", 30)
+system.keyboard.type(system.keyboard.TypeMode.STRING, "paste-heavy payload")</pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════ system.opencv ══ -->
+  <section class="module" id="module-system-opencv">
+    <div class="module-title">system.opencv</div>
+    <div class="module-desc">Load images and perform computer vision operations using OpenCV. Returns <code>Mat</code> objects for image processing.</div>
+
+    <div class="entry" id="fn-opencv-load_from_file">
+      <div class="entry-name"><span>system.opencv.load_from_file</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Load an image file into a <code>Mat</code>.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>filename</code></td><td><code>string</code></td><td>Path to the image file</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>Mat</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local mat = system.opencv.load_from_file("assets/sample.png")</pre>
+    </div>
+
+    <div class="section-header">Mat methods</div>
+    <div class="entry">
+      <div class="entry-desc">All image operations return a new <code>Mat</code>. Mats are garbage collected automatically, but call <code>:free()</code> early when working with large images to manage memory pressure.</div>
+      <table class="params-table">
+        <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+        <tr><td><code>:to_bgr()</code></td><td><code>Mat</code></td><td>Convert from BGRA to BGR. Errors if the Mat is not 4-channel.</td></tr>
+        <tr><td><code>:to_bgra()</code></td><td><code>Mat</code></td><td>Widen OpenCV storage from <code>CV_8UC3</code> (BGR) to BGRA (<code>CV_8UC4</code>).</td></tr>
+        <tr><td><code>:to_pixelbuffer()</code></td><td><code>PixelBuffer</code></td><td>Convert to a raw pixel buffer</td></tr>
+        <tr><td><code>:resize(w, h)</code></td><td><code>Mat</code></td><td>Resize to exact pixel dimensions</td></tr>
+        <tr><td><code>:upsample()</code></td><td><code>Mat</code></td><td>Double the image size (2×)</td></tr>
+        <tr><td><code>:downsample()</code></td><td><code>Mat</code></td><td>Halve the image size (0.5×)</td></tr>
+        <tr><td><code>:extract_channel(channel)</code></td><td><code>Mat</code></td><td>Extract a single color channel. <code>channel</code> is 1-indexed (1 = first channel).</td></tr>
+        <tr><td><code>:match_template(template, options?)</code></td><td><code>TemplateMatchVector</code></td><td>Find occurrences of <code>template</code> within this Mat. See options below.</td></tr>
+        <tr><td><code>:free()</code></td><td>—</td><td>Release native memory immediately</td></tr>
+      </table>
+    </div>
+
+    <div class="section-header">Mat:match_template options</div>
+    <div class="entry">
+      <div class="entry-desc"><code>:match_template(template, nil)</code> uses an internal threshold of <code>-1</code> to return OpenCV's single best bounding box. Passing <code>{ threshold = 0.94 }</code> keeps every localized peak above <code>0.94</code>. Use <code>raw = true</code> for the brute-force pyramid-free path.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>threshold</code></td><td><code>number</code> (0–1)</td><td>Minimum score to keep iterating when searching multiple hits. Omit (or explicitly <code>-1</code>) to request the hottest single correlation.</td></tr>
+        <tr><td><code>raw</code></td><td><code>boolean</code></td><td>If <code>true</code>, skips pyramid acceleration and runs a direct match</td></tr>
+        <tr><td><code>mask</code></td><td><code>Mat</code></td><td>Optional mask Mat applied during matching</td></tr>
+        <tr><td><code>scene_downsampled</code></td><td><code>Mat</code></td><td>Pre-downsampled scene Mat for pyramid matching</td></tr>
+        <tr><td><code>template_downsampled</code></td><td><code>Mat</code></td><td>Pre-downsampled template Mat for pyramid matching</td></tr>
+        <tr><td><code>mask_downsampled</code></td><td><code>Mat</code></td><td>Pre-downsampled mask Mat for pyramid matching</td></tr>
+      </table>
+    </div>
+
+    <div class="section-header">TemplateMatchVector</div>
+    <div class="entry">
+      <div class="entry-desc">Returned by <code>:match_template</code>. Behaves as an array of match results, supporting <code>#</code> and <code>ipairs</code>.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>[i]</code></td><td>match</td><td>1-based access to each match result</td></tr>
+        <tr><td><code>[i].x</code></td><td><code>integer</code></td><td>X coordinate of the match in the scene</td></tr>
+        <tr><td><code>[i].y</code></td><td><code>integer</code></td><td>Y coordinate of the match in the scene</td></tr>
+        <tr><td><code>[i].score</code></td><td><code>number</code></td><td>Match confidence score (0–1)</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="example">End-to-end</div>
+      <pre class="example-code">local scene = system.opencv.load_from_file("screens/last.png")
+local tpl = system.opencv.load_from_file("assets/button_template.png"):resize(96, 64)
+local matches = scene:match_template(tpl)
+if #matches >= 1 then
+  local m = matches[1]
+  print("hit", m.x, m.y, m.score)
+end
+
+scene:match_template(tpl, { threshold = 0.9, raw = false })</pre>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════ system.fs ══ -->
+  <section class="module" id="module-system-fs">
+    <div class="module-title">system.fs</div>
+    <div class="module-desc">Filesystem access — read, write, query, and manage files and directories.</div>
+
+    <div class="entry" id="fn-fs-open">
+      <div class="entry-name"><span>system.fs.open</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Open a file and return a handle. Mode follows standard Lua I/O conventions (<code>"r"</code>, <code>"w"</code>, <code>"a"</code>, <code>"rb"</code>, etc.).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>File path</td></tr>
+        <tr><td><code>mode</code> <span class="optional">(optional)</span></td><td><code>string</code></td><td>Open mode. Defaults to <code>"r"</code>.</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>FileHandle</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local f = system.fs.open("data/log.txt", "a")
+f:write("tick\n")
+f:close()</pre>
+    </div>
+
+    <div class="section-header">FileHandle methods</div>
+    <div class="entry">
+      <table class="params-table">
+        <tr><th>Method</th><th>Signature</th><th>Description</th></tr>
+        <tr><td><code>:read</code></td><td><code>(spec?)</code> → <code>string|nil</code></td><td>Read data. Accepts Lua format strings (<code>"*a"</code>, <code>"*l"</code>) or a byte count.</td></tr>
+        <tr><td><code>:write</code></td><td><code>(data)</code> → <code>boolean</code></td><td>Write data to the file</td></tr>
+        <tr><td><code>:seek</code></td><td><code>(whence?, offset?)</code> → <code>integer|nil</code></td><td>Seek to a position. <code>whence</code>: <code>"set"</code>, <code>"cur"</code>, <code>"end"</code></td></tr>
+        <tr><td><code>:flush</code></td><td><code>()</code> → <code>boolean</code></td><td>Flush write buffer to disk</td></tr>
+        <tr><td><code>:close</code></td><td><code>()</code> → <code>boolean</code></td><td>Close the file handle</td></tr>
+        <tr><td><code>:lines</code></td><td><code>()</code> → <code>iterator</code></td><td>Returns an iterator over lines in the file</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">local f = system.fs.open("notes.txt", "r")
+for line in f:lines() do
+  print(line)
+end
+f:seek("set", 0)
+local head = f:read(64)
+f:close()</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-read_all">
+      <div class="entry-name"><span>system.fs.read_all</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Read the entire contents of a file as a string in one call.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>File path</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>string</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local body = system.fs.read_all("manifest.json")</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-write_all">
+      <div class="entry-name"><span>system.fs.write_all</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Write (or overwrite) an entire file with the given string.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>File path</td></tr>
+        <tr><td><code>data</code></td><td><code>string</code></td><td>Content to write</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.fs.write_all("out/result.txt", "ok\n")</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-append">
+      <div class="entry-name"><span>system.fs.append</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Append data to the end of a file.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>File path</td></tr>
+        <tr><td><code>data</code></td><td><code>string</code></td><td>Content to append</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.fs.append("logs/run.log", "checkpoint\n")</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-exists">
+      <div class="entry-name"><span>system.fs.exists</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Check whether a path exists on disk.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>Path to check</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">if system.fs.exists("config.json") then
+  print("config present")
+end</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-stat">
+      <div class="entry-name"><span>system.fs.stat</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Return metadata about a path.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>Path to inspect</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>FileStat</code> — <code>{ path, exists, is_file, is_dir, size }</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local meta = system.fs.stat("out/result.txt")
+print(meta.exists, meta.size)</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-list">
+      <div class="entry-name"><span>system.fs.list</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">List files and directories at a path. Lists the current working directory if no path is given.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code> <span class="optional">(optional)</span></td><td><code>string</code></td><td>Directory path. Defaults to CWD.</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>string[]</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">local names = system.fs.list(".")
+for _, name in ipairs(names) do print(name) end</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-remove">
+      <div class="entry-name"><span>system.fs.remove</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Delete a file or empty directory.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>Path to remove</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.fs.remove("tmp/old.txt")</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-mkdir">
+      <div class="entry-name"><span>system.fs.mkdir</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Create a directory. Optionally create parent directories as needed.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>Directory path to create</td></tr>
+        <tr><td><code>recursive</code> <span class="optional">(optional)</span></td><td><code>boolean</code></td><td>Create parent directories if they don't exist</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.fs.mkdir("out/cache", true)</pre>
+    </div>
+
+    <div class="entry" id="fn-fs-rename">
+      <div class="entry-name"><span>system.fs.rename</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Move or rename a file or directory.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>src</code></td><td><code>string</code></td><td>Source path</td></tr>
+        <tr><td><code>dst</code></td><td><code>string</code></td><td>Destination path</td></tr>
+      </table>
+      <div class="returns"><strong>Returns</strong> &nbsp;<code>boolean</code></div>
+      <div class="example">Example</div>
+      <pre class="example-code">system.fs.rename("draft.txt", "final.txt")</pre>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════ Manifest ══ -->
+  <section class="module" id="module-manifest">
+    <div class="module-title">manifest.json</div>
+    <div class="module-desc">Every macro project must include a <code>manifest.json</code> at its root. It declares the entry point, requested permissions, file access rules, and optional runtime guardrails. Only <code>entry</code> is required.</div>
+
+    <div class="entry">
+      <div class="entry-name"><span>Example</span></div>
+      <pre style="font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:14px 16px;overflow-x:auto;line-height:1.6;color:var(--text);margin-top:4px">{
+  "name": "My Macro",
+  "version": "1.0.0",
+  "entry": "main.lua",
+  "permissions": [
+    { "name": "screen_capture" },
+    { "name": "mouse_control", "optional": true }
+  ],
+  "files": [
+    "data/config.json",
+    { "path": "logs/output.txt", "write": true }
+  ],
+  "rate_limits": {
+    "mouse_events_per_sec": 60,
+    "cpu_throttle_percent": 50
+  }
+}</pre>
+    </div>
+
+    <div class="section-header">Top-level fields</div>
+
+    <div class="entry">
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td><code>entry</code></td><td><code>string</code></td><td>Yes</td><td>Path to the main Lua file, relative to the project root</td></tr>
+        <tr><td><code>name</code></td><td><code>string</code></td><td>No</td><td>Display name for the macro project</td></tr>
+        <tr><td><code>version</code></td><td><code>string</code></td><td>No</td><td>User-defined version string</td></tr>
+        <tr><td><code>permissions</code></td><td><code>Permission[]</code></td><td>No</td><td>List of OS permissions the macro needs. See below.</td></tr>
+        <tr><td><code>files</code></td><td><code>FileRule[]</code></td><td>No</td><td>Allowlist of files the macro may access. See below.</td></tr>
+        <tr><td><code>rate_limits</code></td><td><code>RateLimits</code></td><td>No</td><td>Runtime throughput and resource caps. See below.</td></tr>
+      </table>
+    </div>
+
+    <div class="section-header">Permission object</div>
+    <div class="entry">
+      <div class="entry-desc">Each entry in the <code>permissions</code> array is an object with the following fields.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td><code>name</code></td><td><code>string</code></td><td>Yes</td><td>Permission identifier. Known values: <code>"screen_capture"</code>, <code>"keyboard_listen"</code>, <code>"keyboard_control"</code>, <code>"mouse_control"</code></td></tr>
+        <tr><td><code>optional</code></td><td><code>boolean</code></td><td>No</td><td>If <code>true</code>, a denied permission does not block execution of the macro</td></tr>
+      </table>
+    </div>
+
+    <div class="section-header">File rule</div>
+    <div class="entry">
+      <div class="entry-desc">Each entry in <code>files</code> is either a plain path string (grants read access) or an object for explicit access control. At least one of <code>read</code> or <code>write</code> must be <code>true</code> when using the object form.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>Yes</td><td>File path relative to project root</td></tr>
+        <tr><td><code>read</code></td><td><code>boolean</code></td><td>Conditional</td><td>Allow read access to this path</td></tr>
+        <tr><td><code>write</code></td><td><code>boolean</code></td><td>Conditional</td><td>Allow write access to this path</td></tr>
+        <tr><td><code>optional</code></td><td><code>boolean</code></td><td>No</td><td>If <code>true</code>, the permission prompt for this file can be skipped</td></tr>
+      </table>
+      <div class="overloads" style="margin-top:10px">
+        <div class="overload">"data/config.json"  ← shorthand, grants read</div>
+        <div class="overload">{ "path": "logs/out.txt", "write": true }  ← explicit write access</div>
+        <div class="overload">{ "path": "cache.db", "read": true, "write": true }  ← read + write</div>
+      </div>
+    </div>
+
+    <div class="section-header">rate_limits object</div>
+    <div class="entry">
+      <div class="entry-desc">All fields are optional. Caps are enforced at runtime; exceeding a kill threshold terminates the macro.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>mouse_events_per_sec</code></td><td><code>number &gt; 0</code></td><td>Maximum mouse events dispatched per second</td></tr>
+        <tr><td><code>keyboard_events_per_sec</code></td><td><code>number &gt; 0</code></td><td>Maximum key events dispatched per second</td></tr>
+        <tr><td><code>keyboard_text_chars_per_sec</code></td><td><code>number &gt; 0</code></td><td>Maximum characters typed per second via <code>system.keyboard.type</code></td></tr>
+        <tr><td><code>cpu_throttle_percent</code></td><td><code>number &gt; 0</code></td><td>CPU usage percentage at which the runtime begins throttling the macro</td></tr>
+        <tr><td><code>cpu_kill_percent</code></td><td><code>number &gt; 0</code></td><td>CPU usage percentage at which the macro is forcibly terminated</td></tr>
+        <tr><td><code>resident_ram_limit_mb</code></td><td><code>number &gt; 0</code></td><td>Physical memory limit in megabytes</td></tr>
+        <tr><td><code>virtual_ram_limit_mb</code></td><td><code>number &gt; 0</code></td><td>Virtual memory limit in megabytes</td></tr>
+        <tr><td><code>virtual_ram_limit_enabled</code></td><td><code>boolean</code></td><td>Toggle enforcement of <code>virtual_ram_limit_mb</code></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════ Types ══ -->
+  <section class="module" id="module-types">
+    <div class="module-title">Classes &amp; Type Aliases</div>
+    <div class="module-desc">Shared types referenced across the API.</div>
+
+    <div class="entry">
+      <div class="entry-name"><span>Rect</span><span class="entry-kind cls">class</span></div>
+      <div class="entry-desc">A rectangular region on screen.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x</code></td><td><code>number</code></td><td>Left edge</td></tr>
+        <tr><td><code>y</code></td><td><code>number</code></td><td>Top edge</td></tr>
+        <tr><td><code>w</code></td><td><code>number</code></td><td>Width</td></tr>
+        <tr><td><code>h</code></td><td><code>number</code></td><td>Height</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>Point</span><span class="entry-kind cls">class</span></div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x</code></td><td><code>number</code></td><td>Horizontal coordinate</td></tr>
+        <tr><td><code>y</code></td><td><code>number</code></td><td>Vertical coordinate</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>Display</span><span class="entry-kind cls">class</span></div>
+      <div class="entry-desc">Information about a connected display.</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>id</code></td><td><code>integer</code></td><td>Unique display identifier</td></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Position of the display in the global screen coordinate space</td></tr>
+        <tr><td><code>w, h</code></td><td><code>number</code></td><td>Display resolution in points</td></tr>
+        <tr><td><code>scale</code></td><td><code>number</code></td><td>Backing scale factor (e.g. 2.0 for Retina)</td></tr>
+        <tr><td><code>refresh_rate</code></td><td><code>number</code></td><td>Display refresh rate in Hz</td></tr>
+        <tr><td><code>is_main</code></td><td><code>boolean</code></td><td>True if this is the primary display</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>PixelBuffer</span><span class="entry-kind cls">class</span></div>
+      <div class="entry-desc">Raw BGRA pixel data backed by native memory. Obtained from <code>system.screen.buffer</code>, <code>Mat:to_pixelbuffer()</code>, or buffer operations. Mutable buffers support pixel writes; read-only buffers (e.g. the live screen buffer) do not. All operations that allocate a new buffer are garbage collected automatically; call <code>:free()</code> to release early.</div>
+      <div class="section-header" style="margin-top:12px">Fields</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>data</code></td><td><code>cdata ptr</code></td><td>Pointer to raw BGRA pixel bytes</td></tr>
+        <tr><td><code>width</code></td><td><code>integer</code></td><td>Buffer width in pixels</td></tr>
+        <tr><td><code>height</code></td><td><code>integer</code></td><td>Buffer height in pixels</td></tr>
+        <tr><td><code>stride</code></td><td><code>integer</code></td><td>Row stride in bytes (may be larger than <code>width × 4</code>)</td></tr>
+      </table>
+      <div class="section-header" style="margin-top:12px">Methods</div>
+      <table class="params-table">
+        <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+        <tr><td><code>:crop(region)</code></td><td><code>PixelBuffer</code></td><td>Return a new buffer cropped to <code>{ x, y, w, h }</code>. Allocates new memory.</td></tr>
+        <tr><td><code>:copy()</code></td><td><code>PixelBuffer</code></td><td>Deep copy the buffer into new memory</td></tr>
+        <tr><td><code>:find_color(r, g, b, tolerance?, rect?, reverse?, reverse_vertical?)</code></td><td><code>Point|nil</code></td><td>Search this buffer for a color match. Same semantics as <code>system.screen.find_color</code>.</td></tr>
+        <tr><td><code>:to_opencv_mat(options?)</code></td><td><code>Mat</code></td><td>Convert to an OpenCV Mat. <code>options = { copy?: boolean }</code> — if <code>copy</code> is <code>false</code>, the Mat shares memory with the buffer (no copy); default is a copy.</td></tr>
+        <tr><td><code>:save_frame(filename)</code></td><td><code>boolean</code></td><td>Save the buffer to an image file</td></tr>
+        <tr><td><code>:get_pixel(x, y)</code></td><td><code>Color ptr|nil</code></td><td>Return a <em>mutable</em> pointer to the Color struct at <code>(x, y)</code>. Only available on mutable buffers — errors on read-only buffers. Returns <code>nil</code> if out of bounds.</td></tr>
+        <tr><td><code>:read_pixel(x, y)</code></td><td><code>Color|nil</code></td><td>Return a <em>copy</em> of the Color at <code>(x, y)</code>. Safe on both mutable and read-only buffers. Returns <code>nil</code> if out of bounds.</td></tr>
+        <tr><td><code>:free()</code></td><td>—</td><td>Release native memory immediately. The buffer must not be used after calling this.</td></tr>
+      </table>
+      <div class="section-header" style="margin-top:12px">Color fields</div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>r</code></td><td><code>integer</code> (0–255)</td><td>Red channel</td></tr>
+        <tr><td><code>g</code></td><td><code>integer</code> (0–255)</td><td>Green channel</td></tr>
+        <tr><td><code>b</code></td><td><code>integer</code> (0–255)</td><td>Blue channel</td></tr>
+        <tr><td><code>a</code></td><td><code>integer</code> (0–255)</td><td>Alpha channel</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>StatsInfo</span><span class="entry-kind cls">class</span></div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>cpu</code></td><td><code>number</code></td><td>CPU usage as a percentage</td></tr>
+        <tr><td><code>ram</code></td><td><code>number</code></td><td>Physical memory usage</td></tr>
+        <tr><td><code>vmem</code></td><td><code>number</code></td><td>Virtual memory usage</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>FileStat</span><span class="entry-kind cls">class</span></div>
+      <table class="params-table">
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>path</code></td><td><code>string</code></td><td>The queried path</td></tr>
+        <tr><td><code>exists</code></td><td><code>boolean</code></td><td>Whether the path exists</td></tr>
+        <tr><td><code>is_file</code></td><td><code>boolean</code></td><td>True if the path is a regular file</td></tr>
+        <tr><td><code>is_dir</code></td><td><code>boolean</code></td><td>True if the path is a directory</td></tr>
+        <tr><td><code>size</code></td><td><code>integer</code></td><td>File size in bytes</td></tr>
+      </table>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>TimeUnit</span><span class="entry-kind als">alias</span></div>
+      <div class="alias-values">
+        <div class="alias-val">"s"</div>
+        <div class="alias-val">"ms"</div>
+        <div class="alias-val">"us"</div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>RamUnit</span><span class="entry-kind als">alias</span></div>
+      <div class="alias-values">
+        <div class="alias-val">"b"</div>
+        <div class="alias-val">"kb"</div>
+        <div class="alias-val">"mb"</div>
+        <div class="alias-val">"gb"</div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-name"><span>PermissionName</span><span class="entry-kind als">alias</span></div>
+      <div class="alias-values">
+        <div class="alias-val">"screen_capture"</div>
+        <div class="alias-val">"keyboard_listen"</div>
+        <div class="alias-val">"keyboard_control"</div>
+        <div class="alias-val">"mouse_control"</div>
+        <div class="alias-val">string</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    <p>&copy; Prajwal Prashanth. This documentation is part of Machotkey. Project terms: <a href="../../LICENSE">LICENSE</a> · <a href="../../LEGAL.md">LEGAL.md</a> (guide).</p>
+  </footer>
+
+</main>
+
+<script>
+  // ── Build nav dynamically from DOM ──────────────────────────────────────
+  const nav = document.getElementById('nav');
+
+  // Define sections grouping
+  const groups = [
+    {
+      label: 'Modules',
+      ids: [
+        'module-system',
+        'module-system-stats',
+        'module-system-permissions',
+        'module-system-ui',
+        'module-system-screen',
+        'module-system-screen-canvas',
+        'module-system-screen-ocr',
+        'module-system-mouse',
+        'module-system-keyboard',
+        'module-system-opencv',
+        'module-system-fs',
+      ]
+    },
+    {
+      label: 'Reference',
+      ids: ['module-manifest']
+    },
+    {
+      label: 'Types',
+      ids: ['module-types']
+    }
+  ];
+
+  // For each module section, collect named entries (those with an id on .entry)
+  function getModuleEntries(moduleEl) {
+    const results = [];
+    moduleEl.querySelectorAll('.entry[id]').forEach(entry => {
+      const nameEl = entry.querySelector('.entry-name span:first-child');
+      if (nameEl) {
+        results.push({ id: entry.id, label: nameEl.textContent.trim() });
+      }
+    });
+    return results;
+  }
+
+  // Shorten label for sidebar: strip module prefix for sub-items
+  function shortLabel(moduleId, fullLabel) {
+    // e.g. "system.screen.find_color" -> "find_color"
+    // We just take the last segment after the last dot
+    const parts = fullLabel.split('.');
+    return parts[parts.length - 1];
+  }
+
+  const allModuleRows = []; // { moduleId, linkEl, toggleBtn, subEl, subLinks[] }
+
+  groups.forEach(group => {
+    const labelEl = document.createElement('span');
+    labelEl.className = 'nav-section-label';
+    labelEl.textContent = group.label;
+    nav.appendChild(labelEl);
+
+    group.ids.forEach(moduleId => {
+      const moduleEl = document.getElementById(moduleId);
+      if (!moduleEl) return;
+
+      const titleEl = moduleEl.querySelector('.module-title');
+      const moduleLabel = titleEl ? titleEl.textContent.trim() : moduleId;
+      const entries = getModuleEntries(moduleEl);
+
+      // Row wrapper
+      const row = document.createElement('div');
+      row.className = 'nav-module-row';
+
+      // Toggle button (only if there are sub-entries)
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'nav-module-toggle';
+      toggleBtn.setAttribute('aria-label', 'Expand ' + moduleLabel);
+      toggleBtn.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 1.5L5.5 4L2 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+
+      if (entries.length === 0) {
+        toggleBtn.style.visibility = 'hidden';
+        toggleBtn.style.pointerEvents = 'none';
+      }
+
+      // Module link
+      const link = document.createElement('a');
+      link.href = '#' + moduleId;
+      link.textContent = moduleLabel;
+
+      row.appendChild(toggleBtn);
+      row.appendChild(link);
+      nav.appendChild(row);
+
+      // Sub-items
+      const subEl = document.createElement('div');
+      subEl.className = 'nav-sub';
+      const subLinks = [];
+
+      entries.forEach(({ id, label }) => {
+        const subLink = document.createElement('a');
+        subLink.href = '#' + id;
+        subLink.textContent = shortLabel(moduleId, label);
+        subLink.title = label;
+        subEl.appendChild(subLink);
+        subLinks.push({ id, el: subLink });
+      });
+
+      nav.appendChild(subEl);
+
+      // Toggle click — mark as manually pinned open/closed
+      toggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isOpen = subEl.classList.contains('open');
+        const willOpen = !isOpen;
+        subEl.classList.toggle('open', willOpen);
+        toggleBtn.classList.toggle('open', willOpen);
+        // Track manual state: true = pinned open, false = pinned closed, null = auto
+        subEl._pinned = willOpen ? 'open' : 'closed';
+      });
+
+      // Clicking the module link opens its sub-menu and pins it open
+      link.addEventListener('click', () => {
+        if (entries.length > 0 && !subEl.classList.contains('open')) {
+          subEl.classList.add('open');
+          toggleBtn.classList.add('open');
+          subEl._pinned = 'open';
+        }
+      });
+
+      allModuleRows.push({ moduleId, linkEl: link, toggleBtn, subEl, subLinks });
+    });
+  });
+
+  // ── Scroll-based active state ────────────────────────────────────────────
+  // Collect all scroll targets: module sections + individual entries
+  const allTargets = [];
+  allModuleRows.forEach(({ moduleId, linkEl, toggleBtn, subEl, subLinks }) => {
+    allTargets.push({ id: moduleId, el: linkEl, isModule: true, toggleBtn, subEl });
+    subLinks.forEach(({ id, el }) => {
+      allTargets.push({ id, el, isModule: false });
+    });
+  });
+
+  function setActive(activeId) {
+    // Clear active highlights
+    allTargets.forEach(t => t.el.classList.remove('active'));
+
+    // Find the target
+    const target = allTargets.find(t => t.id === activeId);
+    if (!target) return;
+
+    target.el.classList.add('active');
+
+    // Determine which module is currently active
+    let activeModuleId = null;
+    if (target.isModule) {
+      activeModuleId = target.id;
+    } else {
+      const parentRow = allModuleRows.find(row =>
+        row.subLinks.some(s => s.id === activeId)
+      );
+      if (parentRow) {
+        parentRow.linkEl.classList.add('active');
+        activeModuleId = parentRow.moduleId;
+      }
+    }
+
+    // For each module row: open if it's the active one (unless pinned closed),
+    // close if it's not (unless pinned open).
+    allModuleRows.forEach(row => {
+      const isActive = row.moduleId === activeModuleId;
+      const pinned = row.subEl._pinned; // 'open' | 'closed' | undefined
+
+      if (isActive) {
+        // Auto-open if not pinned closed
+        if (pinned !== 'closed' && row.subLinks.length > 0) {
+          row.subEl.classList.add('open');
+          row.toggleBtn.classList.add('open');
+        }
+      } else {
+        // Auto-close if not pinned open
+        if (pinned !== 'open') {
+          row.subEl.classList.remove('open');
+          row.toggleBtn.classList.remove('open');
+        }
+      }
+    });
+
+    // Scroll active link into sidebar view
+    target.el.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Build a flat list of all observable elements in document order
+  const observableIds = [];
+  allModuleRows.forEach(({ moduleId, subLinks }) => {
+    observableIds.push(moduleId);
+    subLinks.forEach(s => observableIds.push(s.id));
+  });
+
+  // Use IntersectionObserver to track which element is near the top of the viewport
+  let currentActive = null;
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const el = entry.target;
+      el._visible = entry.isIntersecting;
+    });
+
+    // Find the topmost visible element
+    let topmost = null;
+    let topmostY = Infinity;
+    observableIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el._visible) {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < topmostY) {
+          topmostY = rect.top;
+          topmost = id;
+        }
+      }
+    });
+
+    if (topmost && topmost !== currentActive) {
+      currentActive = topmost;
+      setActive(topmost);
+    }
+  }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
+
+  observableIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) io.observe(el);
+  });
+
+  // ── Search ───────────────────────────────────────────────────────────────
+  const search = document.getElementById('search');
+  search.addEventListener('input', () => {
+    const q = search.value.toLowerCase().trim();
+    if (!q) {
+      document.querySelectorAll('.entry, .module-title, .module-desc, .section-header').forEach(el => el.classList.remove('hidden'));
+      document.querySelectorAll('.module').forEach(m => m.classList.remove('hidden'));
+      return;
+    }
+    document.querySelectorAll('.module').forEach(mod => {
+      const entries = mod.querySelectorAll('.entry');
+      let anyVisible = false;
+      entries.forEach(entry => {
+        const text = entry.textContent.toLowerCase();
+        if (text.includes(q)) { entry.classList.remove('hidden'); anyVisible = true; }
+        else entry.classList.add('hidden');
+      });
+      mod.classList.toggle('hidden', !anyVisible);
+    });
+  });
+</script>
+</body>
+</html>

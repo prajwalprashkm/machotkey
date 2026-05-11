@@ -63,6 +63,7 @@ add_executable(macro_runner
 set_target_properties(machotkey PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${PROJECT_ROOT}/project/resources/Info.plist"
+    MACOSX_BUNDLE_ICON_FILE "machotkey.icns"
     MACOSX_BUNDLE_BUNDLE_NAME "MacHotkey"
     MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
@@ -79,6 +80,12 @@ add_dependencies(machotkey user_generate_embed user_vite_build)
 file(GLOB_RECURSE APP_RESOURCES "${PROJECT_ROOT}/project/resources/Resources/*")
 target_sources(machotkey PRIVATE ${APP_RESOURCES})
 set_source_files_properties(${APP_RESOURCES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+set(APP_ICON "${PROJECT_ROOT}/project/resources/machotkey.icns")
+if(EXISTS "${APP_ICON}")
+    target_sources(machotkey PRIVATE "${APP_ICON}")
+    set_source_files_properties("${APP_ICON}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+endif()
 
 set(MACOS_FRAMEWORKS
     "ApplicationServices"

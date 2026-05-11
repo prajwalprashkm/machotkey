@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 // dear imgui: Platform Backend for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
 // - Not well tested. If you want a portable application, prefer using the GLFW or SDL platform Backends on Mac.

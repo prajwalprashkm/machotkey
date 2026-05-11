@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 // webview.mm
 #include <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
@@ -14,8 +21,9 @@
 #include <utility>
 
 #include "webview.h"
+#include "../../include/debug_config.h"
 
-#if defined(WEBVIEW_MM_DEBUG)
+#if MHK_ENABLE_DEBUG_LOGS
 #define DEBUG_LOG(format, ...) NSLog(@"[webview.mm DEBUG] " format, ##__VA_ARGS__)
 #else
 #define DEBUG_LOG(format, ...)
@@ -204,6 +212,7 @@ private:
 
     // ✅ Added: strong reference so WebKit does not drop the UIDelegate
     WebUIDelegate* __strong uiDelegate;
+    bool is_frameless_window = false;
 
     std::map<std::string, std::function<std::string(const std::string&)>>* shared_bindings;
     std::function<void(const std::string&, const std::string&)> macro_ui_handler;
@@ -634,7 +643,7 @@ std::string WebViewApp::invoke_binding(const std::string& name, const std::strin
 WebViewWindowImpl::WebViewWindowImpl(long id, const std::string& title, int x, int y, 
                                      int width, int height, bool resizable, bool frameless,
                                      std::map<std::string, std::function<std::string(const std::string&)>>* bindings)
-    : id(id), shared_bindings(bindings) {
+    : id(id), is_frameless_window(frameless), shared_bindings(bindings) {
     @autoreleasepool {
         NSScreen* mainScreen = [NSScreen mainScreen];
         NSRect screenFrame = [mainScreen frame];
@@ -672,6 +681,11 @@ WebViewWindowImpl::WebViewWindowImpl(long id, const std::string& title, int x, i
         
         if (!frameless) {
             [window setBackgroundColor:[NSColor windowBackgroundColor]];
+            // Ensure drag behavior is initialized immediately for titled macro UI windows.
+            [window setMovable:YES];
+            [window setMovableByWindowBackground:NO];
+            [window setTitleVisibility:NSWindowTitleVisible];
+            [window setTitlebarAppearsTransparent:NO];
         } else {
             [window setOpaque:NO];
             [window setBackgroundColor:[NSColor clearColor]];
@@ -774,15 +788,26 @@ WebViewWindowImpl::WebViewWindowImpl(long id, const std::string& title, int x, i
         uiDelegate.cppImpl = this;
         webView.UIDelegate = uiDelegate;
 
-        //#if defined(WEBVIEW_MM_DEBUG)
-        webView.inspectable = YES;
-        #warning "Web Inspector enabled for debugging."
-        /*#else
-        [config.preferences setValue:@NO forKey:@"developerExtrasEnabled"];
-        #endif*/
-
         [window setContentView:webView];
         [window makeKeyAndOrderFront:nil];
+        if (!frameless) {
+            [[NSRunningApplication currentApplication]
+                activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
+            [NSApp activateIgnoringOtherApps:YES];
+            [window makeMainWindow];
+            [window makeKeyWindow];
+            [window orderFrontRegardless];
+            [window displayIfNeeded];
+            // On some macOS builds, titled WebKit windows do not become draggable
+            // by title bar until the first manual resize. Trigger an equivalent
+            // no-op frame commit to initialize drag hit-testing immediately.
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (!window) return;
+                NSRect frame = [window frame];
+                [window setFrame:frame display:YES];
+                [window displayIfNeeded];
+            });
+        }
     }
 }
 
@@ -848,6 +873,13 @@ void WebViewWindowImpl::load_project_html_file(const std::string& absolute_html_
             DEBUG_LOG(@"Loading project HTML from %@", htmlURL);
             DEBUG_LOG(@"Read access root %@", readAccessURL);
             [webView loadFileURL:htmlURL allowingReadAccessToURL:readAccessURL];
+            if (([window styleMask] & NSWindowStyleMaskTitled) != 0) {
+                [window setMovable:YES];
+                [window setMovableByWindowBackground:NO];
+                NSRect frame = [window frame];
+                [window setFrame:frame display:YES];
+                [window displayIfNeeded];
+            }
         }
     };
     if ([NSThread isMainThread]) load_block();
@@ -1089,7 +1121,12 @@ void WebViewWindowImpl::exit_fullscreen() {
 
 void WebViewWindowImpl::show() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSRunningApplication currentApplication]
+            activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
+        [NSApp activateIgnoringOtherApps:YES];
         [window makeKeyAndOrderFront:nil];
+        [window makeMainWindow];
+        [window displayIfNeeded];
     });
 }
 
@@ -1107,21 +1144,29 @@ void WebViewWindowImpl::set_opacity(float alpha) {
 
 void WebViewWindowImpl::bring_to_front(bool key) {
     if([NSThread isMainThread] == true){
+        [[NSRunningApplication currentApplication]
+            activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
         [NSApp activateIgnoringOtherApps:YES];
         if (key) {
             [window makeKeyAndOrderFront:nil];
+            [window makeMainWindow];
         } else {
-            [window orderFront:nil];
+            [window orderFrontRegardless];
         }
+        [window displayIfNeeded];
         return;
     }
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        [[NSRunningApplication currentApplication]
+            activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
         [NSApp activateIgnoringOtherApps:YES];
         if (key) {
             [window makeKeyAndOrderFront:nil];
+            [window makeMainWindow];
         } else {
-            [window orderFront:nil];
+            [window orderFrontRegardless];
         }
+        [window displayIfNeeded];
     });
 }
 

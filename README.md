@@ -62,7 +62,7 @@ Together with customizable limits and permission auditing, the stack is aimed at
 | **Toolchain** | Xcode Command Line Tools or full Xcode (Clang, SDK) |
 | **Git** | Submodules required for bundled dependencies |
 
-Third-party libraries used by the default build are vendored under `project/libs/` (OpenCV, LuaJIT, Eigen, ImGui, sol2, etc.), typically tracked as **git submodules**. Clone with `--recurse-submodules`.
+Third-party code is vendored under **`project/libs/`** (OpenCV, LuaJIT, Eigen, ImGui, sol2, etc., often as **git submodules**), plus header-only **`project/include/httplib/`** (cpp-httplib, MIT) and **`project/include/nlohmann/`** (nlohmann/json, MIT). Clone with `--recurse-submodules` where submodules are used.
 
 Machotkey can run well even on low specs, and consumes very little RAM overhead (usually under 200 MB for the application itself and near zero for the runner). CPU usage overhead is also minimal.
 
@@ -109,4 +109,8 @@ Dependency knobs live under **`cmake/user/`** (included from root `CMakeLists.tx
 
 ## License
 
-Add your license here when you publish (for example MIT, Apache-2.0, or GPLv3).
+**Machotkey’s original code** is **[source-available](LICENSE)** (not OSI “open source”): the repo is public for **transparency and audit**, but **redistribution, public forks, and derivative products** are **not** granted without written permission. You may **read** the code and, for **personal non‑commercial** evaluation, **build and run locally** as described in `LICENSE`.
+
+**Vendored code** under `project/libs/`, `project/include/httplib/`, and `project/include/nlohmann/` remains under **its own** licenses (Apache-2.0, MIT, LGPL, MPL-2.0, … as applicable). If you **distribute** a binary that links or embeds them, you must meet **those** licenses (attribution, LGPL relinking rules, etc.) in addition to the restrictions on **Machotkey-authored** files.
+
+**Guide for readers:** [LEGAL.md](LEGAL.md). **Copyright:** see the notice at the beginning of [LICENSE](LICENSE). Published API/guide HTML: [docs/web/](docs/web/) — see [docs/README.md](docs/README.md). This overview is **not legal advice**; consult a lawyer for your situation.

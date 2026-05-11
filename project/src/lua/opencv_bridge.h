@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgcodecs.hpp"

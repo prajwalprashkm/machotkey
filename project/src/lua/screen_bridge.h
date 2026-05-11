@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include "sol/forward.hpp"
 #include "sol/sol.hpp"
 #include "input_interface.h"
@@ -9,9 +16,16 @@
 #include "ipc_protocol.h"
 #include "utils.h"
 #include "shm.h"
+#include "../../include/debug_config.h"
 #include <QuartzCore/CABase.h>
 #include "ocr.h"
 #include "img_utils.h"
+
+#if MHK_ENABLE_DEBUG_LOGS
+#ifndef IPC_DEBUG
+#define IPC_DEBUG
+#endif
+#endif
 
 extern sol::protected_function capture_callback;
 extern bool using_callback;

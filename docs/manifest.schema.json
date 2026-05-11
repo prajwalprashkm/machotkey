@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://machotkey.local/schemas/manifest.schema.json",
+  "title": "Machotkey Manifest",
+  "type": "object",
+  "required": ["entry"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name for the macro project."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "User-defined project version."
+    },
+    "entry": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Main Lua entry file path (relative to project root)."
+    },
+    "permissions": {
+      "type": "array",
+      "description": "Requested runtime permissions.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "examples": [
+              "screen_capture",
+              "keyboard_listen",
+              "keyboard_control",
+              "mouse_control"
+            ]
+          },
+          "optional": {
+            "type": "boolean",
+            "description": "If true, denied permission does not block execution."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Explicit file allowlist for sandboxed macro access.",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read": {
+                "type": "boolean",
+                "description": "Allow read access to path."
+              },
+              "write": {
+                "type": "boolean",
+                "description": "Allow write access to path."
+              },
+              "optional": {
+                "type": "boolean",
+                "description": "Optional file rule (permission prompt can be skipped)."
+              }
+            },
+            "anyOf": [
+              { "properties": { "read": { "const": true } }, "required": ["read"] },
+              { "properties": { "write": { "const": true } }, "required": ["write"] }
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "rate_limits": {
+      "type": "object",
+      "description": "Requested runtime guardrails and throughput caps.",
+      "properties": {
+        "mouse_events_per_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "keyboard_events_per_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "keyboard_text_chars_per_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "cpu_throttle_percent": { "type": "number", "exclusiveMinimum": 0 },
+        "cpu_kill_percent": { "type": "number", "exclusiveMinimum": 0 },
+        "resident_ram_limit_mb": { "type": "number", "exclusiveMinimum": 0 },
+        "virtual_ram_limit_mb": { "type": "number", "exclusiveMinimum": 0 },
+        "virtual_ram_limit_enabled": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

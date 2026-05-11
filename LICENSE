@@ -1,0 +1,66 @@
+Machotkey — source-available license
+=====================================
+
+Copyright (c) Prajwal Prashanth. All rights reserved.
+
+This license applies to **original Machotkey work** in this repository (the
+application, scripts, build files, and documentation **outside** vendored
+third-party trees: `project/libs/`, `project/include/httplib/`, and
+`project/include/nlohmann/`). It does **not** replace the licenses that govern
+those third-party components.
+
+1. Purpose (transparency)
+-------------------------
+You may clone and **read** the source, and keep a private local copy, solely to:
+understand, verify, audit, or build confidence in what the software does
+(“permitted inspection”). Public visibility of the code is intentional for
+**trust and security review**.
+
+2. What you may not do without prior written permission
+-------------------------------------------------------
+Unless the copyright holder explicitly agrees in writing, you may not:
+
+  (a) **Distribute** copies of this source or substantial excerpts (except
+      sharing links to this official repository).
+
+  (b) **Create or distribute derivative works** based on this code (including
+      forks intended for others to use, patches published as competing
+      products, or rebranded builds).
+
+  (c) **Use** the software or its design, in source or binary form, to offer a
+      **competing** macro, automation, or substantially similar product or
+      service (commercial or non‑commercial).
+
+  (d) **Remove or alter** copyright notices, this license text, or
+      third‑party attribution required elsewhere in the repository, including notices within source code headers. All copies or substantial portions of the Software must retain the original copyright notice and this license.
+
+3. Build from source (personal, non‑commercial)
+-----------------------------------------------
+For **permitted inspection** only, you may compile and run the software **on
+your own machines** for **personal, non‑commercial** use. You may **not**
+distribute binaries you produce, or host “unofficial” builds for others, without
+written permission.
+
+4. Not open source (OSI)
+------------------------
+This is **not** an Open Source Initiative–approved license. It does **not**
+grant the broad rights to use, modify, merge, publish, distribute, and
+sublicense that licenses such as MIT, Apache-2.0, or GPL provide.
+
+5. Third‑party components
+-------------------------
+Code under paths like `project/libs/`, `project/include/httplib/`, and
+`project/include/nlohmann/` remains under **its own** licenses (Apache-2.0,
+MIT, LGPL, MPL-2.0, etc., as applicable). If you **distribute** a combined work
+(e.g. an app bundle linking those libraries), you are responsible for complying
+with **those** licenses (notices, source‑sharing or relinking obligations for
+LGPL, etc.), in addition to the restrictions in sections 2–3 **for Machotkey’s
+original code**.
+
+6. No warranty
+--------------
+THE SOURCE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND. See applicable
+law for limits of liability.
+
+For licensing inquiries (commercial use, redistribution, exceptions), contact
+the copyright holder through the project’s published channels.

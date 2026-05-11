@@ -1,3 +1,10 @@
+--[[
+    Copyright (c) Prajwal Prashanth. All rights reserved.
+
+    This source code is licensed under the source-available license 
+    found in the LICENSE file in the root directory of this source tree.
+--]]
+
 local ffi = require("ffi")
 
 -- 1. FFI Definitions: Mapping C++ memory structures to Lua
@@ -228,10 +235,6 @@ local common_methods_pixelbuffer = {
         
         collectgarbage("step", tonumber(self.width*self.height*12/1024))
         return ffi.gc(ffi.C._PixelBuffer_to_OpenCVMat(readonly, casted_self), _lua_OpenCVMat_free)
-    end,
-
-    save = function(self, filename)
-        return system.save_frame(self, filename)
     end,
 
     save_frame = function(self, filename)
@@ -478,8 +481,6 @@ function system.screen.save_frame(filename)
     if h == ffi.NULL then return false end
     return system.save_frame(state.buffer, filename)
 end
-
-system.screen.save_screenshot = system.screen.save_frame
 
 system.fs = system.fs or {}
 local fs_native = system.fs
@@ -886,14 +887,6 @@ wrap_object_methods(system.opencv, {
 })
 wrap_object_methods(system.screen.ocr.fast, {"recognize_text"})
 wrap_object_methods(system.screen.ocr.accurate, {"recognize_text"})
-
-if type(system.keyboard) == "table" and system.keyboard.tap == nil and type(system.keyboard.press) == "function" then
-    system.keyboard.tap = system.keyboard.press
-end
-
-if type(system.opencv) == "table" and system.opencv.load_image == nil and type(system.opencv.load_from_file) == "function" then
-    system.opencv.load_image = system.opencv.load_from_file
-end
 
 -- 1. Define the whitelist of modules the user is allowed to 'require'
 local allowed_modules = {

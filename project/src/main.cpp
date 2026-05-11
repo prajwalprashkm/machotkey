@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Prajwal Prashanth. All rights reserved.
+ *
+ * This source code is licensed under the source-available license 
+ * found in the LICENSE file in the root directory of this source tree.
+ */
+
 #include <bitset>
 #include <chrono>
 #include <cstddef>
@@ -41,6 +48,7 @@
 #include "nlohmann/json.hpp"
 #include "httplib/httplib.h"
 #include "overlay_provider.h"
+#include "../include/debug_config.h"
 
 constexpr double kDefaultMouseRatePerSec = 3000.0;
 constexpr double kDefaultKeyboardRatePerSec = 3000.0;
@@ -194,33 +202,7 @@ bool exceeded = false;
 
 std::string log_buffer = "";
 
-class LogRedirect {
-public:
-    LogRedirect(const std::string& filename)  // Save the original console buffer
-    {
-        original_buffer = std::cout.rdbuf();
-        std::filesystem::create_directories(std::filesystem::path(filename).parent_path());
-        log_file.open(filename, std::ios::out);
-
-        if (log_file.is_open()) {
-            std::cout.rdbuf(log_file.rdbuf()); // Redirect cout to the file buffer
-        }else{
-            std::cerr << "Failed to open log file: " << filename << std::endl;
-        }
-    }
-
-    ~LogRedirect() {
-        std::cout.rdbuf(original_buffer); // Restore original console buffer on destruction
-    }
-
-private:
-    std::ofstream log_file;
-    std::streambuf* original_buffer;
-};
-
-#define DEBUG_ENABLED
-
-#if defined(DEBUG_ENABLED)
+#if MHK_ENABLE_DEBUG_LOGS
 #define DEBUG_LOG(msg) std::cout << "[main.cpp DEBUG]: " << msg;
 #else
 #define DEBUG_LOG(msg)
@@ -2789,7 +2771,6 @@ int main(int argc, char* argv[]) {
     for(auto& perm : permissions){
         perm.store(0);
     }
-    //LogRedirect logRedirect(std::string(std::getenv("HOME"))+"/machotkey/machotkey.log");
     disable_app_nap();
     get_screen_dim(screen_w, screen_h);
 
