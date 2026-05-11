@@ -19,8 +19,13 @@
 #include <memory>
 #include <algorithm>
 #include <utility>
+#include <atomic>
 
 #include "webview.h"
+
+namespace {
+std::function<void()> g_app_terminate_handler;
+}
 #include "../../include/debug_config.h"
 
 #if MHK_ENABLE_DEBUG_LOGS
@@ -218,6 +223,7 @@ private:
     std::function<void(const std::string&, const std::string&)> macro_ui_handler;
     bool local_file_security_mode = false;
     bool cpp_bridge_enabled = true;
+    std::atomic<bool> allow_ui_ops{true};
 };
 
 class WebViewAppImpl {
@@ -292,7 +298,10 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
 
 @implementation AppDelegate
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
-    // Close all windows
+    (void)sender;
+    if (g_app_terminate_handler) {
+        g_app_terminate_handler();
+    }
     for (NSWindow *window in [NSApp windows]) {
         [window close];
     }
@@ -637,6 +646,10 @@ std::string WebViewApp::invoke_binding(const std::string& name, const std::strin
     return impl->invoke_binding(name, payload);
 }
 
+void WebViewApp::set_terminate_handler(std::function<void()> handler) {
+    g_app_terminate_handler = std::move(handler);
+}
+
 //
 // WebViewWindowImpl methods
 //
@@ -812,6 +825,7 @@ WebViewWindowImpl::WebViewWindowImpl(long id, const std::string& title, int x, i
 }
 
 WebViewWindowImpl::~WebViewWindowImpl() {
+    allow_ui_ops.store(false, std::memory_order_release);
     @autoreleasepool {
         if (webView) {
             [webView.configuration.userContentController removeScriptMessageHandlerForName:@"cpp_message_handler"];
@@ -1006,6 +1020,7 @@ void WebViewWindowImpl::handle_macro_ui_message(NSString* event_name, NSString* 
 void WebViewWindowImpl::set_macro_ui_handler(std::function<void(const std::string&, const std::string&)> handler) {
     cpp_bridge_enabled = false;
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [webView.configuration.userContentController removeScriptMessageHandlerForName:@"cpp_message_handler"];
     });
     macro_ui_handler = std::move(handler);
@@ -1013,13 +1028,16 @@ void WebViewWindowImpl::set_macro_ui_handler(std::function<void(const std::strin
 
 void WebViewWindowImpl::close() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window close];
     });
 }
 
 void WebViewWindowImpl::send_to_js(const std::string& js) {
+    if (!allow_ui_ops.load(std::memory_order_acquire)) return;
     NSString *jsString = [NSString stringWithUTF8String:js.c_str()];
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [webView evaluateJavaScript:jsString completionHandler:^(NSObject *result, NSError *error) {
             if (error) {
                 DEBUG_LOG(@"Error executing JavaScript: %@", error);
@@ -1032,24 +1050,28 @@ void WebViewWindowImpl::send_to_js(const std::string& js) {
 void WebViewWindowImpl::set_title(const std::string& title) {
     NSString* nsTitle = [NSString stringWithUTF8String:title.c_str()];
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window setTitle:nsTitle];
     });
 }
 
 void WebViewWindowImpl::center() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window center];
     });
 }
 
 void WebViewWindowImpl::set_ignores_mouse(bool ignores) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window setIgnoresMouseEvents:ignores];
     });
 }
 
 void WebViewWindowImpl::set_size(int width, int height) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         NSRect frame = [window frame];
         frame.size.width = width;
         frame.size.height = height;
@@ -1062,6 +1084,7 @@ void WebViewWindowImpl::set_size(int width, int height) {
 
 void WebViewWindowImpl::set_position(int x, int y) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         NSScreen* primaryScreen = [[NSScreen screens] firstObject];
         CGFloat primaryHeight = primaryScreen.frame.size.height;
         NSRect windowFrame = [window frame];
@@ -1076,6 +1099,7 @@ void WebViewWindowImpl::set_position(int x, int y) {
 
 void WebViewWindowImpl::get_position_async(std::function<void(int, int)> callback) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         if (!window) return;
 
         NSScreen* primaryScreen = [[NSScreen screens] firstObject];
@@ -1097,18 +1121,21 @@ void WebViewWindowImpl::get_position_async(std::function<void(int, int)> callbac
 
 void WebViewWindowImpl::minimize() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window miniaturize:nil];
     });
 }
 
 void WebViewWindowImpl::maximize() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window zoom:nil];
     });
 }
 
 void WebViewWindowImpl::exit_fullscreen() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         if ([window isZoomed]) {
             [window zoom:nil];
         }
@@ -1121,6 +1148,7 @@ void WebViewWindowImpl::exit_fullscreen() {
 
 void WebViewWindowImpl::show() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [[NSRunningApplication currentApplication]
             activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
         [NSApp activateIgnoringOtherApps:YES];
@@ -1132,18 +1160,21 @@ void WebViewWindowImpl::show() {
 
 void WebViewWindowImpl::hide() {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window orderOut:nil];
     });
 }
 
 void WebViewWindowImpl::set_opacity(float alpha) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [window setAlphaValue:alpha];
     });
 }
 
 void WebViewWindowImpl::bring_to_front(bool key) {
     if([NSThread isMainThread] == true){
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [[NSRunningApplication currentApplication]
             activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
         [NSApp activateIgnoringOtherApps:YES];
@@ -1157,6 +1188,7 @@ void WebViewWindowImpl::bring_to_front(bool key) {
         return;
     }
     dispatch_sync(dispatch_get_main_queue(), ^{
+        if (!allow_ui_ops.load(std::memory_order_acquire)) return;
         [[NSRunningApplication currentApplication]
             activateWithOptions:(NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps)];
         [NSApp activateIgnoringOtherApps:YES];

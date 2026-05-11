@@ -76,8 +76,11 @@ public:
     void set_accessory(bool isAccessory);
     void set_menu_action_handler(std::function<void(AppMenuAction)> handler);
     void set_menu_runtime_state(bool has_project, bool macro_running, bool macro_paused);
-    bool is_headless_mode_enabled() const;
+    bool is_headless_mode_enabled() const;    
     std::string invoke_binding(const std::string& name, const std::string& payload = "");
+    /// Called on the AppKit main thread from \c applicationShouldTerminate before windows are closed.
+    /// Use this to stop background threads and tear down \c WebViewWindow pointers owned by the host.
+    void set_terminate_handler(std::function<void()> handler);
 private:
     WebViewAppImpl* impl;
 };

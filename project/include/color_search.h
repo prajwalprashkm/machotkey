@@ -12,6 +12,19 @@
 #include <iostream>
 #include <arm_neon.h>
 
+// Macro runner defines this to sleep inside long scans so CPU limits can apply during FFI hot loops.
+#ifndef MACHOTKEY_COLOR_SCAN_THROTTLE
+#define MACHOTKEY_COLOR_SCAN_THROTTLE() ((void)0)
+#endif
+
+#define MACHOTKEY_COLOR_SCAN_THROTTLE_EVERY(rows_since, interval) \
+    do { \
+        if (++(rows_since) >= (interval)) { \
+            (rows_since) = 0; \
+            MACHOTKEY_COLOR_SCAN_THROTTLE(); \
+        } \
+    } while (0)
+
 struct BoundingRect {
     size_t x, y;
     size_t width, height;
@@ -53,7 +66,9 @@ inline ColorMatch find_exact_color(
     int y_end   = reverse_vertical ? (int)rect.y     : (int)end_y;
     int y_step  = reverse_vertical ? -1              : 1;
 
+    int color_scan_throttle_rows = 0;
     for (int y = y_start; reverse_vertical ? y >= y_end : y < y_end; y += y_step) {
+        MACHOTKEY_COLOR_SCAN_THROTTLE_EVERY(color_scan_throttle_rows, 16);
         const uint32_t* row_ptr = reinterpret_cast<const uint32_t*>(data + (y * bytes_per_row));
         
         if (!reverse) {
@@ -123,7 +138,9 @@ inline ColorMatch find_color_with_tolerance(
     int y_end   = reverse_vertical ? (int)rect.y     : (int)end_y;
     int y_step  = reverse_vertical ? -1              : 1;
 
+    int color_scan_throttle_rows = 0;
     for (int y = y_start; reverse_vertical ? y >= y_end : y < y_end; y += y_step) {
+        MACHOTKEY_COLOR_SCAN_THROTTLE_EVERY(color_scan_throttle_rows, 16);
         const uint8_t* row_ptr = data + (y * bytes_per_row);
         
         if (!reverse) {
@@ -214,7 +231,9 @@ inline ColorMatch find_color_fast_sample(
     int y_end   = reverse_vertical ? (int)rect.y   : (int)end_y;
     int y_step  = reverse_vertical ? -(int)skip_pixels : (int)skip_pixels;
 
+    int color_scan_throttle_rows = 0;
     for (int y = y_start; reverse_vertical ? y >= y_end : y < y_end; y += y_step) {
+        MACHOTKEY_COLOR_SCAN_THROTTLE_EVERY(color_scan_throttle_rows, 16);
         size_t row_start = (size_t)y * bytes_per_row;
         if (!reverse) {
             for (size_t x = start_x; x < end_x; x += skip_pixels) {

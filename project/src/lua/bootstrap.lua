@@ -594,7 +594,11 @@ function system._update_tasks()
         -- Check if task is ready OR if we had a massive time skip (OS Wakeup)
         if not task.wake_at or now >= task.wake_at then
             local ok, msg, param = coroutine.resume(task.co)
-            
+
+            if system._apply_cpu_throttle then
+                system._apply_cpu_throttle()
+            end
+
             if not ok then
                 -- Log the error so you can see WHY it stopped
                 print("[TASK CRASH]: " .. tostring(msg))

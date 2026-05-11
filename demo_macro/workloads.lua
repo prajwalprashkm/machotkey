@@ -1,9 +1,28 @@
 --[[
-  Color / input / fs: batched ops → average µs/op.
-  OCR + OpenCV: heavy — one task per frame, timing = that single task (ops always 1).
+  Color / input / fs: batched ops → timing one batch per callback (sum of ops / sum workload µs → action_ops_per_sec).
+  OCR + OpenCV: one timed op per callback.
+  M.action_label(phase) names the op for HUD/bench.
 ]]
 
 local M = {}
+
+--- Human-readable primary action per phase (for ops/s display).
+function M.action_label(phase)
+  if phase == "color" then
+    return "find_color"
+  elseif phase == "ocr_fast" then
+    return "ocr.fast.recognize_text"
+  elseif phase == "ocr_accurate" then
+    return "ocr.accurate.recognize_text"
+  elseif phase == "input" then
+    return "mouse.get_position"
+  elseif phase == "opencv" then
+    return "OpenCV match_template"
+  elseif phase == "fs" then
+    return "fs.read_all"
+  end
+  return nil
+end
 
 local function set_stats(state, ops, total_us)
   if not ops or ops <= 0 then

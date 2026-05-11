@@ -39,8 +39,7 @@ vscode_api_def/
 .vscode/
 macro_project/
 
-project/ui-dist/
 project/resources/machotkey.iconset/
-.venv/
 
 project/src/ui/
+project/src/ui-dist/

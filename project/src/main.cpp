@@ -785,6 +785,25 @@ bool resource_limits_equal(const ResourceLimitConfig& a, const ResourceLimitConf
            a.virtual_ram_limit_enabled == b.virtual_ram_limit_enabled;
 }
 
+// Per-project JSON can keep old approved_resource_limits while the resource panel (global atomics) was
+// updated; read_project_permission_record prefers the JSON values. Merge so each run uses the stricter
+// of saved project caps and current global settings—matching what get_resource_limits shows.
+void merge_record_resource_limits_with_global_settings(ProjectPermissionRecord& record) {
+    const ResourceLimitConfig g = clamp_resource_limits(ResourceLimitConfig{
+        cpu_throttle_percent.load(),
+        cpu_kill_percent.load(),
+        resident_ram_limit_bytes.load(),
+        virtual_ram_limit_bytes.load(),
+        vram_limit_enabled.load()});
+    ResourceLimitConfig& r = record.approved_resource_limits;
+    r.cpu_throttle_percent = std::min(g.cpu_throttle_percent, r.cpu_throttle_percent);
+    r.cpu_kill_percent = std::min(g.cpu_kill_percent, r.cpu_kill_percent);
+    r.resident_ram_limit_bytes = std::min(g.resident_ram_limit_bytes, r.resident_ram_limit_bytes);
+    r.virtual_ram_limit_bytes = std::min(g.virtual_ram_limit_bytes, r.virtual_ram_limit_bytes);
+    r.virtual_ram_limit_enabled = g.virtual_ram_limit_enabled && r.virtual_ram_limit_enabled;
+    r = clamp_resource_limits(r);
+}
+
 RateLimitConfig read_global_rate_settings() {
     ensure_permission_store_loaded();
     RateLimitConfig rates = clamp_rate_limits(RateLimitConfig{});
@@ -1425,8 +1444,33 @@ int start_file_server(const std::string& data_path) {
 #include <QuartzCore/QuartzCore.h>
 
 #include <atomic>
+#include <mutex>
 
 std::mutex ipc_mutex;
+std::recursive_mutex ui_lifetime_mutex;
+
+static void destroy_all_macro_ui_windows_under_lock() {
+    for (auto it = macro_ui_windows.begin(); it != macro_ui_windows.end(); ) {
+        WebViewWindow* w = it->second;
+        it = macro_ui_windows.erase(it);
+        if (w) app.destroy_window(w);
+    }
+    macro_ui_last_window_id = 0;
+}
+
+static void prepare_app_terminate() {
+    running.store(false, std::memory_order_release);
+    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    destroy_all_macro_ui_windows_under_lock();
+    if (main_win) {
+        app.destroy_window(main_win);
+        main_win = nullptr;
+    }
+    if (overlay) {
+        app.destroy_window(overlay);
+        overlay = nullptr;
+    }
+}
 
 inline const std::string escape_string(const std::string& str){
     return nlohmann::json(str).dump();
@@ -1499,6 +1543,7 @@ void refresh_screen_capture_excluded_windows() {
 
 void apply_headless_mode(bool enabled) {
     headless_mode_enabled.store(enabled);
+    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
     if (enabled) {
         if (main_win) {
             app.destroy_window(main_win);
@@ -1520,12 +1565,16 @@ void apply_headless_mode(bool enabled) {
 }
 
 void emit_status_line(const std::string& text, const std::string& kind) {
-    if (!main_win || headless_mode_enabled.load()) return;
+    if (headless_mode_enabled.load()) return;
+    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    if (!main_win) return;
     main_win->send_to_js("window.addStatusLine(" + escape_string(text) + ", " + escape_string(kind) + ");");
 }
 
 void emit_console_lines(const std::string& text) {
-    if (!main_win || headless_mode_enabled.load()) return;
+    if (headless_mode_enabled.load()) return;
+    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    if (!main_win) return;
     main_win->send_to_js("window.addConsoleLines(" + escape_string(text) + ");");
 }
 
@@ -1604,24 +1653,20 @@ WebViewWindow* get_macro_ui_window(uint32_t window_id) {
 }
 
 void close_macro_ui_window(uint32_t window_id) {
+    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
     auto it = macro_ui_windows.find(window_id);
     if (it == macro_ui_windows.end()) return;
-    if (it->second) {
-        it->second->close();
-    }
+    WebViewWindow* w = it->second;
     macro_ui_windows.erase(it);
     if (macro_ui_last_window_id == window_id) {
         macro_ui_last_window_id = 0;
     }
+    if (w) app.destroy_window(w);
 }
 
 void close_all_macro_ui_windows() {
-    for (auto& [id, win] : macro_ui_windows) {
-        (void)id;
-        if (win) win->close();
-    }
-    macro_ui_windows.clear();
-    macro_ui_last_window_id = 0;
+    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    destroy_all_macro_ui_windows_under_lock();
 }
 
 void forward_ui_event_to_runner(uint32_t window_id, const std::string& event_name, const std::string& payload) {
@@ -1678,25 +1723,30 @@ void stop_macro() {
             perm.store(0);
         }
         current_permission_grants.clear();
-        close_all_macro_ui_windows();
+        {
+            std::lock_guard<std::recursive_mutex> ui_lock(ui_lifetime_mutex);
+            destroy_all_macro_ui_windows_under_lock();
 
-        if (!headless_mode_enabled.load() && main_win) {
-            main_win->show();
+            if (!headless_mode_enabled.load() && main_win) {
+                main_win->show();
+            }
+
+            if (overlay) {
+                overlay->get_position_async([](int x, int y){
+                    if (!overlay) return;
+                    overlay->x = x;
+                    overlay->y = y;
+
+                    overlay->set_opacity(0.0);
+                    overlay->send_to_js("window.soft_hide_taskbar();");
+                    overlay->set_ignores_mouse(true);
+                    overlay->set_position(0, 0);
+                    overlay->set_size(screen_w, screen_h);
+                });
+
+                overlay->send_to_js("window.set_name('No macro running'); window.request_dimensions(); window.set_btn_states(true, true, true);");
+            }
         }
-
-
-        overlay->get_position_async([](int x, int y){
-            overlay->x = x;
-            overlay->y = y;
-
-            overlay->set_opacity(0.0);
-            overlay->send_to_js("window.soft_hide_taskbar();");
-            overlay->set_ignores_mouse(true);
-            overlay->set_position(0, 0);
-            overlay->set_size(screen_w, screen_h);
-        });
-
-        overlay->send_to_js("window.set_name('No macro running'); window.request_dimensions(); window.set_btn_states(true, true, true);");
         paused = false;
         cpu_throttle_sleep_us.store(0, std::memory_order_relaxed);
         exceeded = false;
@@ -2381,56 +2431,59 @@ void monitor_data() {
                     window_title = std::string(title_buf.data());
                 }
 
-                if (current_project_dir.empty()) {
-                    emit_status_line("✗ Cannot open UI: no project loaded", "error");
-                    send_response(header.request_id, {false});
-                    continue;
-                }
-                if (macro_ui_windows.size() >= kMaxMacroUiWindows) {
-                    emit_status_line("✗ Cannot open UI: window limit reached", "error");
-                    send_response(header.request_id, {false});
-                    continue;
-                }
-                if (macro_ui_windows.count(meta.window_id) > 0) {
-                    emit_status_line("✗ Cannot open UI: duplicate window id", "error");
-                    send_response(header.request_id, {false});
-                    continue;
-                }
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    if (current_project_dir.empty()) {
+                        emit_status_line("✗ Cannot open UI: no project loaded", "error");
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    if (macro_ui_windows.size() >= kMaxMacroUiWindows) {
+                        emit_status_line("✗ Cannot open UI: window limit reached", "error");
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    if (macro_ui_windows.count(meta.window_id) > 0) {
+                        emit_status_line("✗ Cannot open UI: duplicate window id", "error");
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
 
-                std::filesystem::path ui_abs;
-                std::string error;
-                if (!resolve_manifest_ui_html_path(std::filesystem::path(current_project_dir), current_manifest, requested_path, ui_abs, error)) {
-                    emit_status_line("✗ UI open blocked: " + error, "error");
-                    send_response(header.request_id, {false});
-                    continue;
-                }
+                    std::filesystem::path ui_abs;
+                    std::string error;
+                    if (!resolve_manifest_ui_html_path(std::filesystem::path(current_project_dir), current_manifest, requested_path, ui_abs, error)) {
+                        emit_status_line("✗ UI open blocked: " + error, "error");
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
 
-                int x = static_cast<int>(screen_w / 3);
-                int y = static_cast<int>(screen_h / 5);
-                int w = static_cast<int>(screen_w / 3);
-                int h = static_cast<int>(screen_h / 2);
-                if (meta.flags & kUiOpenFlagHasX) x = meta.x;
-                if (meta.flags & kUiOpenFlagHasY) y = meta.y;
-                if (meta.flags & kUiOpenFlagHasWidth) w = meta.width;
-                if (meta.flags & kUiOpenFlagHasHeight) h = meta.height;
-                if (w <= 0 || h <= 0) {
-                    send_response(header.request_id, {false});
-                    continue;
-                }
+                    int x = static_cast<int>(screen_w / 3);
+                    int y = static_cast<int>(screen_h / 5);
+                    int w = static_cast<int>(screen_w / 3);
+                    int h = static_cast<int>(screen_h / 2);
+                    if (meta.flags & kUiOpenFlagHasX) x = meta.x;
+                    if (meta.flags & kUiOpenFlagHasY) y = meta.y;
+                    if (meta.flags & kUiOpenFlagHasWidth) w = meta.width;
+                    if (meta.flags & kUiOpenFlagHasHeight) h = meta.height;
+                    if (w <= 0 || h <= 0) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
 
-                WebViewWindow* created = app.create_window(window_title, x, y, w, h, true, false);
-                if (!created) {
-                    send_response(header.request_id, {false});
-                    continue;
+                    WebViewWindow* created = app.create_window(window_title, x, y, w, h, true, false);
+                    if (!created) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    const uint32_t source_window_id = meta.window_id;
+                    created->set_macro_ui_handler([source_window_id](const std::string& event_name, const std::string& payload) {
+                        forward_ui_event_to_runner(source_window_id, event_name, payload);
+                    });
+                    created->load_project_html_file(ui_abs.string(), current_project_dir);
+                    macro_ui_windows[source_window_id] = created;
+                    macro_ui_last_window_id = source_window_id;
+                    send_response(header.request_id, {true});
                 }
-                const uint32_t source_window_id = meta.window_id;
-                created->set_macro_ui_handler([source_window_id](const std::string& event_name, const std::string& payload) {
-                    forward_ui_event_to_runner(source_window_id, event_name, payload);
-                });
-                created->load_project_html_file(ui_abs.string(), current_project_dir);
-                macro_ui_windows[source_window_id] = created;
-                macro_ui_last_window_id = source_window_id;
-                send_response(header.request_id, {true});
             } else if (header.type == MsgType::SYSTEM_UI_CLOSE) {
                 uint32_t target_id = macro_ui_last_window_id;
                 if (header.payload_size == sizeof(UITargetPayload)) {
@@ -2487,12 +2540,15 @@ void monitor_data() {
                 }
                 buf[js_len] = '\0';
                 const std::string js(buf.data());
-                WebViewWindow* target = get_macro_ui_window(target_id);
-                if (!target) {
-                    send_response(header.request_id, {false});
-                    continue;
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    WebViewWindow* target = get_macro_ui_window(target_id);
+                    if (!target) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    target->send_to_js(js);
                 }
-                target->send_to_js(js);
                 send_response(header.request_id, {true});
             } else if (header.type == MsgType::SYSTEM_UI_SET_TITLE) {
                 if (header.payload_size < sizeof(UITargetStringPayload)) {
@@ -2518,12 +2574,15 @@ void monitor_data() {
                     continue;
                 }
                 buf[meta.data_len] = '\0';
-                WebViewWindow* target = get_macro_ui_window(meta.window_id);
-                if (!target) {
-                    send_response(header.request_id, {false});
-                    continue;
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    WebViewWindow* target = get_macro_ui_window(meta.window_id);
+                    if (!target) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    target->set_title(std::string(buf.data()));
                 }
-                target->set_title(std::string(buf.data()));
                 send_response(header.request_id, {true});
             } else if (header.type == MsgType::SYSTEM_UI_SET_SIZE) {
                 if (header.payload_size != sizeof(UISetSizePayload)) {
@@ -2539,12 +2598,15 @@ void monitor_data() {
                     send_response(header.request_id, {false});
                     continue;
                 }
-                WebViewWindow* target = get_macro_ui_window(payload.window_id);
-                if (!target) {
-                    send_response(header.request_id, {false});
-                    continue;
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    WebViewWindow* target = get_macro_ui_window(payload.window_id);
+                    if (!target) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    target->set_size(payload.width, payload.height);
                 }
-                target->set_size(payload.width, payload.height);
                 send_response(header.request_id, {true});
             } else if (header.type == MsgType::SYSTEM_UI_SET_POSITION) {
                 if (header.payload_size != sizeof(UISetPositionPayload)) {
@@ -2556,12 +2618,15 @@ void monitor_data() {
                     send_response(header.request_id, {false});
                     continue;
                 }
-                WebViewWindow* target = get_macro_ui_window(payload.window_id);
-                if (!target) {
-                    send_response(header.request_id, {false});
-                    continue;
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    WebViewWindow* target = get_macro_ui_window(payload.window_id);
+                    if (!target) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    target->set_position(payload.x, payload.y);
                 }
-                target->set_position(payload.x, payload.y);
                 send_response(header.request_id, {true});
             } else if(header.type == MsgType::SYSTEM_UI_CENTER){
                 if (header.payload_size != sizeof(UITargetPayload)) {
@@ -2573,12 +2638,15 @@ void monitor_data() {
                     send_response(header.request_id, {false});
                     continue;
                 }
-                WebViewWindow* target = get_macro_ui_window(payload.window_id);
-                if (!target) {
-                    send_response(header.request_id, {false});
-                    continue;
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    WebViewWindow* target = get_macro_ui_window(payload.window_id);
+                    if (!target) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    target->center();
                 }
-                target->center();
                 send_response(header.request_id, {true});
             } else if (header.type == MsgType::SYSTEM_UI_SET_VISIBILITY) {
                 if (header.payload_size != sizeof(UISetVisibilityPayload)) {
@@ -2590,13 +2658,16 @@ void monitor_data() {
                     send_response(header.request_id, {false});
                     continue;
                 }
-                WebViewWindow* target = get_macro_ui_window(payload.window_id);
-                if (!target) {
-                    send_response(header.request_id, {false});
-                    continue;
+                {
+                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    WebViewWindow* target = get_macro_ui_window(payload.window_id);
+                    if (!target) {
+                        send_response(header.request_id, {false});
+                        continue;
+                    }
+                    if (payload.visible) target->show();
+                    else target->hide();
                 }
-                if (payload.visible) target->show();
-                else target->hide();
                 send_response(header.request_id, {true});
             }
         }
@@ -2629,10 +2700,14 @@ void monitor_logs() {
 }
 
 void monitor_resources() {
-    constexpr uint32_t kThrottleMaxSleepUs = 4000;
-    constexpr uint32_t kThrottleUpStepUs = 100;
-    constexpr uint32_t kThrottleDownStepUs = 120;
-    constexpr double kCpuHysteresisPercent = 3.0;
+    // Max cooperative sleep the host may request. Keep moderate: scan paths apply a *fraction* per
+    // hook (see macro_runner); very large values still made the PID overshoot before that fix.
+    constexpr uint32_t kThrottleMaxSleepUs = 65000;
+    constexpr uint32_t kThrottleUpStepUs = 350;
+    constexpr uint32_t kThrottleDownStepUs = 500;
+    constexpr double kCpuHysteresisPercent = 2.0;
+    constexpr double kThrottleOverageSqScale = 35.0;
+    constexpr uint32_t kThrottleBumperCapUs = 12000;
     while(running.load(std::memory_order_relaxed)){
         if (current_runner_pid == -1){
             cpu_throttle_sleep_us.store(0, std::memory_order_relaxed);
@@ -2684,7 +2759,11 @@ void monitor_resources() {
             }
 
             if (stats.cpu_usage > cpu_throttle_target + kCpuHysteresisPercent) {
-                const uint32_t next_sleep = std::min(kThrottleMaxSleepUs, throttle_sleep + kThrottleUpStepUs);
+                const double over = stats.cpu_usage - cpu_throttle_target;
+                const uint32_t sq_bump =
+                    static_cast<uint32_t>(std::min(static_cast<double>(kThrottleBumperCapUs), over * over * kThrottleOverageSqScale));
+                const uint32_t next_sleep =
+                    std::min(kThrottleMaxSleepUs, throttle_sleep + std::max(kThrottleUpStepUs, sq_bump));
                 if (next_sleep != throttle_sleep) {
                     cpu_throttle_sleep_us.store(next_sleep, std::memory_order_relaxed);
                     send_runner_throttle_set(next_sleep);
@@ -2709,7 +2788,8 @@ void monitor_resources() {
 
             last = current;
             started = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            const int poll_ms = (throttle_sleep > 0 || stats.cpu_usage > cpu_throttle_target) ? 33 : 100;
+            std::this_thread::sleep_for(std::chrono::milliseconds(poll_ms));
         }
     }
 }
@@ -2926,6 +3006,7 @@ int main(int argc, char* argv[]) {
             return "error: " + system_permission_error;
         }
 
+        merge_record_resource_limits_with_global_settings(record);
         const auto approved_before_negotiation = record.approved_rates;
         const auto approved_resources_before_negotiation = record.approved_resource_limits;
         const auto effective_rates = negotiate_effective_rates(macro_filename, current_manifest.requested_rates, record);
@@ -2967,6 +3048,7 @@ int main(int argc, char* argv[]) {
         );
 
         overlay->get_position_async([filename](int x, int y){
+            if (!overlay) return;
             overlay->x = x;
             overlay->y = y;
 
@@ -3093,17 +3175,21 @@ int main(int argc, char* argv[]) {
         if (!ensure_app_level_system_permissions(macro_filename, grants, quick_system_permission_error)) {
             return "error: " + quick_system_permission_error;
         }
-        RateLimitConfig quick_rates = clamp_rate_limits(RateLimitConfig{});
-        if (quick_manifest.requested_rates.mouse_events_per_sec.has_value()) {
-            quick_rates.mouse_events_per_sec = std::min(quick_rates.mouse_events_per_sec, quick_manifest.requested_rates.mouse_events_per_sec.value());
+        auto quick_record = read_project_permission_record(quick_project_dir);
+        merge_record_resource_limits_with_global_settings(quick_record);
+        const auto quick_approved_rates_before = quick_record.approved_rates;
+        const auto quick_approved_resources_before = quick_record.approved_resource_limits;
+        const auto quick_effective_rates = negotiate_effective_rates(macro_filename, quick_manifest.requested_rates, quick_record);
+        const auto quick_effective_resource_limits =
+            negotiate_effective_resource_limits(macro_filename, quick_manifest.requested_rates, quick_record);
+        const bool quick_rates_changed = !rate_limits_equal(quick_approved_rates_before, quick_record.approved_rates);
+        const bool quick_resources_changed =
+            !resource_limits_equal(quick_approved_resources_before, quick_record.approved_resource_limits);
+        if (quick_rates_changed || quick_resources_changed) {
+            write_project_permission_record(quick_project_dir, quick_record);
         }
-        if (quick_manifest.requested_rates.keyboard_events_per_sec.has_value()) {
-            quick_rates.keyboard_events_per_sec = std::min(quick_rates.keyboard_events_per_sec, quick_manifest.requested_rates.keyboard_events_per_sec.value());
-        }
-        if (quick_manifest.requested_rates.keyboard_text_chars_per_sec.has_value()) {
-            quick_rates.keyboard_text_chars_per_sec = std::min(quick_rates.keyboard_text_chars_per_sec, quick_manifest.requested_rates.keyboard_text_chars_per_sec.value());
-        }
-        set_current_runtime_rates(quick_rates);
+        set_current_runtime_rates(quick_effective_rates);
+        set_runtime_resource_limits(quick_effective_resource_limits);
         apply_permission_grants(grants);
 
         const std::string sandbox_profile = build_dynamic_sandbox_profile(SB_PROFILE, quick_project_dir, quick_manifest);
@@ -3126,6 +3212,7 @@ int main(int argc, char* argv[]) {
         );
 
         overlay->get_position_async([](int x, int y){
+            if (!overlay) return;
             overlay->x = x;
             overlay->y = y;
 
@@ -3360,6 +3447,7 @@ int main(int argc, char* argv[]) {
             bool updated_any = false;
             double throttle_target = clamp_cpu_target_percent(cpu_throttle_percent.load());
             double kill_target = std::max(throttle_target, clamp_cpu_target_percent(cpu_kill_percent.load()));
+            
             if (json.contains("cpu_throttle_percent")) {
                 if (!json["cpu_throttle_percent"].is_number()) return "error: cpu_throttle_percent must be numeric";
                 throttle_target = clamp_cpu_target_percent(json["cpu_throttle_percent"].get<double>());
@@ -3374,6 +3462,9 @@ int main(int argc, char* argv[]) {
                 kill_target = clamp_cpu_target_percent(json["cpu_kill_percent"].get<double>());
                 updated_any = true;
             }
+
+            DEBUG_LOG("\n\n[MAIN]: Setting global CPU limits to " << throttle_target << " " << kill_target << "\n\n\n");
+
             if (kill_target < throttle_target) kill_target = throttle_target;
             write_global_cpu_limit_settings(throttle_target, kill_target);
             uint64_t resident_limit = resident_ram_limit_bytes.load();
@@ -3402,6 +3493,21 @@ int main(int argc, char* argv[]) {
                 return "error: no resource fields provided";
             }
             write_global_memory_limit_settings(resident_limit, virtual_limit, virtual_enabled);
+            // Keep per-project approved_resource_limits in sync with the global panel. Otherwise the next
+            // run_script negotiates from stale JSON while get_resource_limits shows the updated atomics.
+            if (!current_project_dir.empty()) {
+                auto record = read_project_permission_record(std::filesystem::path(current_project_dir));
+                const ResourceLimitConfig new_approved = clamp_resource_limits(ResourceLimitConfig{
+                    cpu_throttle_percent.load(),
+                    cpu_kill_percent.load(),
+                    resident_ram_limit_bytes.load(),
+                    virtual_ram_limit_bytes.load(),
+                    vram_limit_enabled.load()});
+                if (!resource_limits_equal(record.approved_resource_limits, new_approved)) {
+                    record.approved_resource_limits = new_approved;
+                    write_project_permission_record(std::filesystem::path(current_project_dir), record);
+                }
+            }
             const double cpu_throttle_clamped = clamp_cpu_target_percent(cpu_throttle_percent.load());
             const double cpu_kill_clamped = std::max(cpu_throttle_clamped, clamp_cpu_target_percent(cpu_kill_percent.load()));
             const uint64_t resident_clamped = clamp_resident_ram_limit_bytes(resident_ram_limit_bytes.load());
@@ -3487,6 +3593,7 @@ int main(int argc, char* argv[]) {
         lua_ls_manager.start(get_app_bundle_path()+"/Contents/Resources/lua-language-server/bin/lua-language-server");
     });
     lsp_enabler.detach();*/
+    app.set_terminate_handler([] { prepare_app_terminate(); });
     app.run_blocking();
 
     running = false;

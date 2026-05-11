@@ -22,7 +22,7 @@
     <section class="card">
       <h2>Live capture metrics</h2>
       <p class="mono" id="liveMetrics">Waiting for runner…</p>
-      <p class="hint">Metrics update every <code>METRICS_WINDOW_FRAMES</code> frames. <strong>Raw FPS</strong> includes dropped work in the window.</p>
+      <p class="hint">Each row updates every <code>METRICS_WINDOW_FRAMES</code> capture callbacks. <strong>callbacks_s</strong> is capture callback throughput. <strong><em>action</em>=…/s</strong> is primary operations per second using <strong>summed workload time</strong> only (see field reference). <strong>runner_*</strong> is the macro process.</p>
     </section>
 
     <section class="card">
@@ -33,7 +33,25 @@
 
     <section class="card">
       <h2>Last window by phase</h2>
-      <pre class="results" id="resultsDump">{}</pre>
+      <p class="hint bench-visual-hint">Summary below updates after each metrics window. Open <strong>Raw JSON</strong> for the full export.</p>
+      <div id="resultsVisual" class="bench-visual" role="region" aria-label="Benchmark summary by phase"></div>
+      <details class="results-meta">
+        <summary>What each JSON field means</summary>
+        <p class="field-action-note"><code>action_ops_per_sec</code> is <code>sum(ops) ÷ sum(timed workload µs)</code> over the metrics window—throughput of the measured work only, not limited by capture pacing between callbacks.</p>
+        <ul class="field-desc">
+          <li><code>callbacks_per_sec</code> — Completed capture callbacks per second (wall time for the window).</li>
+          <li><code>callback_raw_fps</code> — Same time base as above, but the numerator adds skipped frame indices in the window (stream pressure / drops).</li>
+          <li><code>latency_ms</code> — Average time from frame capture timestamp to callback start (same window).</li>
+          <li><code>action_label</code> — Name of the primary timed API for this phase (e.g. <code>find_color</code>), when applicable.</li>
+          <li><code>action_ops_per_sec</code> — Primary workload ops per second from <strong>summed workload time</strong> (see note above).</li>
+          <li><code>action_avg_us_per_op</code> — Window average: <code>sum(workload µs) ÷ sum(ops)</code>.</li>
+          <li><code>workload_ops_last_batch</code>, <code>workload_us_per_op_last_batch</code>, <code>workload_total_ms_last_batch</code> — The <strong>last</strong> capture callback in the window only (same as the HUD “last batch” line).</li>
+        </ul>
+      </details>
+      <details class="results-json">
+        <summary>Raw JSON</summary>
+        <pre class="results" id="resultsDump">{}</pre>
+      </details>
     </section>
 
     <section class="card">

@@ -43,7 +43,34 @@
 #include <filesystem>
 #include "shared.h"
 #include "shm.h"
+
+std::atomic<uint32_t> throttle_sleep_us{0};
+
+inline void apply_cooperative_throttle() {
+    const uint32_t sleep_us = throttle_sleep_us.load(std::memory_order_relaxed);
+    if (sleep_us > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+    }
+}
+
+// Scanline hooks fire many times per find_color; sleeping the full host value each time stacks to
+// near-zero CPU. Use a tiny fraction per hook with a hard cap so total added sleep scales ~linearly
+// with the host knob instead of ~hooks × knob.
+inline void apply_cooperative_throttle_scan_slice() {
+    const uint32_t fu = throttle_sleep_us.load(std::memory_order_relaxed);
+    if (fu == 0) {
+        return;
+    }
+    constexpr uint32_t kDenom = 320;
+    const uint32_t slice = std::max(1u, fu / kDenom);
+    constexpr uint32_t kMaxSliceUs = 350;
+    const uint32_t us = std::min(slice, kMaxSliceUs);
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
+
+#define MACHOTKEY_COLOR_SCAN_THROTTLE() apply_cooperative_throttle_scan_slice()
 #include "color_search.h"
+#undef MACHOTKEY_COLOR_SCAN_THROTTLE
 #include "ocr.h"
 #include <unistd.h>
 #include "img_utils.h"
@@ -86,7 +113,6 @@ FastOCR fast_ocr(true), regular_ocr(false);
 std::atomic<bool> global_exit_requested{false};
 int global_exit_code = 0;
 std::mutex ipc_mutex;
-std::atomic<uint32_t> throttle_sleep_us{0};
 
 std::atomic<MousePosition> current_mouse_position;
 std::unordered_map<std::string, bool> runtime_permission_grants;
@@ -416,13 +442,6 @@ MessageQueue g_inbox;
 
 uint64_t get_id(uint16_t code, uint64_t flags) {
     return (static_cast<uint64_t>(flags) << 16) | (uint64_t)code;
-}
-
-inline void apply_cooperative_throttle() {
-    const uint32_t sleep_us = throttle_sleep_us.load(std::memory_order_relaxed);
-    if (sleep_us > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
-    }
 }
 
 void runner_ipc_listener(int read_fd) {
@@ -1345,6 +1364,9 @@ int main(int argc, char* argv[]) {
         poll_frame_callback();
         poll_hotkeys();
         poll_ui_events();
+    };
+    system["_apply_cpu_throttle"] = []() {
+        apply_cooperative_throttle();
     };
     system["_project_dir"] = runtime_project_dir;
     {

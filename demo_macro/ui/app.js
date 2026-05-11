@@ -54,7 +54,7 @@
     data = data || {};
     if (data.screen_w && data.screen_h) {
       var el = document.getElementById("liveMetrics");
-      if (el && el.textContent.indexOf("FPS") < 0) {
+      if (el && el.textContent.indexOf("callbacks_s") < 0) {
         el.textContent = "Layout: " + data.screen_w + "×" + data.screen_h + " (from regions.init)";
       }
     }
@@ -73,8 +73,8 @@
     }
     var parts = [];
     if (data.phase) parts.push("phase=" + data.phase);
-    if (data.fps !== undefined) parts.push("fps=" + data.fps.toFixed(2));
-    if (data.raw_fps !== undefined) parts.push("raw_fps=" + data.raw_fps.toFixed(2));
+    if (data.fps !== undefined) parts.push("callbacks_s=" + data.fps.toFixed(2));
+    if (data.raw_fps !== undefined) parts.push("callbacks_raw_s=" + data.raw_fps.toFixed(2));
     if (data.latency_ms !== undefined) parts.push("latency_ms=" + data.latency_ms.toFixed(3));
     if (data.dropped !== undefined) parts.push("dropped_total=" + data.dropped);
     if (data.paused !== undefined) parts.push("paused=" + data.paused);
@@ -82,22 +82,156 @@
     if (data.phase === "opencv" && data.opencv_acknowledged === false) {
       parts.push("opencv=awaiting_OK");
     }
+    if (data.workload_action_label && data.workload_action_hz > 0) {
+      var avg = data.workload_action_avg_us_per_op;
+      parts.push(
+        data.workload_action_label +
+          "=" +
+          data.workload_action_hz.toFixed(0) +
+          "/s" +
+          (avg != null ? " avg_us/op=" + avg.toFixed(1) : "") +
+          " (workload time)"
+      );
+    }
     if (data.workload_ops !== undefined && data.workload_ops > 0) {
       parts.push("ops=" + data.workload_ops);
       if (data.workload_us_per_op !== undefined) parts.push("us/op=" + data.workload_us_per_op.toFixed(1));
       if (data.workload_total_ms !== undefined) parts.push("batch_ms=" + data.workload_total_ms.toFixed(2));
     }
+    if (data.runner_cpu_percent != null && data.runner_cpu_percent !== undefined) {
+      parts.push("runner_cpu=" + data.runner_cpu_percent.toFixed(1) + "%");
+    }
+    if (data.runner_ram_mb != null && data.runner_ram_mb !== undefined) {
+      parts.push("runner_ram=" + data.runner_ram_mb.toFixed(1) + "MB");
+    }
+    if (data.runner_vmem_mb != null && data.runner_vmem_mb !== undefined) {
+      parts.push("runner_vmem=" + data.runner_vmem_mb.toFixed(1) + "MB");
+    }
     var el = document.getElementById("liveMetrics");
     if (el) el.textContent = parts.join("   ");
   };
 
+  function num(x) {
+    var n = Number(x);
+    return isFinite(n) ? n : null;
+  }
+
+  function fmtFixed(n, digits) {
+    if (n == null) return "—";
+    return n.toFixed(digits);
+  }
+
+  function fmtInt(n) {
+    if (n == null) return "—";
+    if (Math.abs(n) >= 1000) return Math.round(n).toLocaleString();
+    return fmtFixed(n, n % 1 === 0 ? 0 : 1);
+  }
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  function metricCell(label, value, primary) {
+    var wrap = el("div", "bench-metric" + (primary ? " bench-metric--primary" : ""));
+    wrap.appendChild(el("span", "bench-metric-label", label));
+    wrap.appendChild(el("span", "bench-metric-value", value));
+    return wrap;
+  }
+
+  function renderBenchVisual(obj) {
+    var root = document.getElementById("resultsVisual");
+    if (!root) return;
+    obj = obj || {};
+    var rows = [];
+    PHASES.forEach(function (p) {
+      if (obj[p] && typeof obj[p] === "object") rows.push(p);
+    });
+    root.innerHTML = "";
+    if (rows.length === 0) {
+      root.appendChild(
+        el(
+          "p",
+          "bench-empty",
+          "No completed metrics windows yet. Run the suite or switch phases — a card appears here after each full metrics window."
+        )
+      );
+      return;
+    }
+    var maxCb = 0;
+    rows.forEach(function (p) {
+      var r = obj[p];
+      var cb = num(r.callbacks_per_sec);
+      if (cb != null && cb > maxCb) maxCb = cb;
+    });
+    var grid = el("div", "bench-grid");
+    rows.forEach(function (p) {
+      var r = obj[p];
+      var cb = num(r.callbacks_per_sec);
+      var raw = num(r.callback_raw_fps);
+      var lat = num(r.latency_ms);
+      var usOp = num(r.action_avg_us_per_op);
+      var opsPerSec = num(r.action_ops_per_sec);
+      if (opsPerSec == null) opsPerSec = num(r.action_ops_per_sec_workload_only);
+      var actionName = r.action_label != null ? String(r.action_label) : "—";
+      var barPct = maxCb > 0 && cb != null ? Math.min(100, Math.round((100 * cb) / maxCb)) : 0;
+
+      var card = el("article", "bench-card");
+      var head = el("div", "bench-card-head");
+      head.appendChild(el("h3", "bench-phase", p));
+      var sub = el("p", "bench-action-label", actionName);
+      head.appendChild(sub);
+      card.appendChild(head);
+
+      var barTrack = el("div", "bench-bar-track");
+      var barFill = el("div", "bench-bar-fill");
+      barFill.style.width = barPct + "%";
+      barTrack.appendChild(barFill);
+      card.appendChild(barTrack);
+      card.appendChild(el("p", "bench-bar-caption", "Capture callbacks/s vs best phase in this view (" + barPct + "% of peak)"));
+
+      var metrics = el("div", "bench-metrics");
+      metrics.appendChild(metricCell("Callbacks / s", fmtFixed(cb, 1), true));
+      metrics.appendChild(metricCell("Raw callbacks / s", fmtFixed(raw, 1), true));
+      metrics.appendChild(metricCell("Latency (ms)", fmtFixed(lat, 3), false));
+      metrics.appendChild(metricCell("Action ops / s (workload time)", fmtInt(opsPerSec), true));
+      metrics.appendChild(metricCell("Avg µs / op", fmtFixed(usOp, 1), false));
+      card.appendChild(metrics);
+
+      var last = el("div", "bench-last-batch");
+      var lo = num(r.workload_ops_last_batch);
+      var lus = num(r.workload_us_per_op_last_batch);
+      var lms = num(r.workload_total_ms_last_batch);
+      last.appendChild(
+        el(
+          "span",
+          "bench-last-batch-title",
+          "Last callback in window: " +
+            fmtInt(lo) +
+            " ops · " +
+            fmtFixed(lus, 1) +
+            " µs/op · " +
+            fmtFixed(lms, 2) +
+            " ms total"
+        )
+      );
+      card.appendChild(last);
+
+      grid.appendChild(card);
+    });
+    root.appendChild(grid);
+  }
+
   window.demoApplyResults = function (obj) {
-    var el = document.getElementById("resultsDump");
-    if (!el) return;
+    renderBenchVisual(obj);
+    var elPre = document.getElementById("resultsDump");
+    if (!elPre) return;
     try {
-      el.textContent = JSON.stringify(obj || {}, null, 2);
+      elPre.textContent = JSON.stringify(obj || {}, null, 2);
     } catch (e) {
-      el.textContent = String(obj);
+      elPre.textContent = String(obj);
     }
   };
 

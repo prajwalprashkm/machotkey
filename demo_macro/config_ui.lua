@@ -56,15 +56,23 @@ local function encode_results_table(results)
       parts[#parts + 1] = string.format("%q:{", phase)
       local inner_first = true
       for rk, rv in pairs(row) do
+        local fragment = nil
         if type(rv) == "number" then
           local n = json_finite_number(rv)
           if n ~= nil then
-            if not inner_first then
-              parts[#parts + 1] = ","
-            end
-            inner_first = false
-            parts[#parts + 1] = string.format("%q:%s", rk, tostring(n))
+            fragment = string.format("%q:%s", rk, tostring(n))
           end
+        elseif type(rv) == "string" then
+          fragment = string.format("%q:%q", rk, rv)
+        elseif type(rv) == "boolean" then
+          fragment = string.format("%q:%s", rk, rv and "true" or "false")
+        end
+        if fragment then
+          if not inner_first then
+            parts[#parts + 1] = ","
+          end
+          inner_first = false
+          parts[#parts + 1] = fragment
         end
       end
       parts[#parts + 1] = "}"
@@ -147,6 +155,15 @@ function M.push_runtime(state)
   if not win then
     return
   end
+  local runner_cpu, runner_ram_mb, runner_vmem_mb = nil, nil, nil
+  if system.stats and system.stats.get_info then
+    local st = system.stats.get_info("mb")
+    if type(st) == "table" then
+      runner_cpu = tonumber(st.cpu)
+      runner_ram_mb = tonumber(st.ram)
+      runner_vmem_mb = tonumber(st.vmem)
+    end
+  end
   local payload = {
     phase = state.phase,
     opencv_acknowledged = state.opencv_acknowledged,
@@ -159,6 +176,12 @@ function M.push_runtime(state)
     workload_ops = state.workload_ops,
     workload_us_per_op = state.workload_us_per_op,
     workload_total_ms = (state.workload_total_us or 0) / 1000,
+    workload_action_label = state.workload_action_label,
+    workload_action_hz = state.workload_action_hz,
+    workload_action_avg_us_per_op = state.workload_action_avg_us_per_op,
+    runner_cpu_percent = runner_cpu,
+    runner_ram_mb = runner_ram_mb,
+    runner_vmem_mb = runner_vmem_mb,
   }
   win:run_js(
     "window.demoApplyRuntime(JSON.parse(" .. js_string_literal(json_for_ui(payload)) .. "));"
@@ -214,6 +237,9 @@ function M.setup(config, state)
       state.phase = p
       state.suite_running = false
       state._suite_arm_after_opencv_ack = nil
+      state._suite_waiting_metrics_for = nil
+      state._suite_on_first_metrics = nil
+      state._suite_gen = (state._suite_gen or 0) + 1
       if p == "opencv" then
         state.opencv_acknowledged = false
       else
