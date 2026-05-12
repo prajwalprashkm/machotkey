@@ -6,7 +6,7 @@ local M = {}
 function M.start(state, config, ctx, geometry, _colors_mod, _regions_mod)
   state.start_time_us = system.get_time("us")
 
-  system.screen.canvas.rect({ x = 20, y = 18, w = 520, h = 300 }, 0x111827CC, { fill = 0x111827CC, id = "hud_bg" })
+  system.screen.canvas.rect({ x = 20, y = 18, w = 570, h = 300 }, 0x111827CC, { fill = 0x111827CC, id = "hud_bg" })
   system.screen.canvas.text("Machotkey demo / capture benchmark", 32, 32, 0xFFFFFFFF, { id = "hud_title" })
   system.screen.canvas.text("Ctrl+P pause/resume   Ctrl+Q quit   Phase + suite from WebView panel", 32, 54, 0x9CA3C8FF, { id = "hud_keys" })
 
