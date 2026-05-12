@@ -1,0 +1,6 @@
+# Disable caching
+plugins:
+  - jekyll-paginate
+
+# Cache busting
+future: true
