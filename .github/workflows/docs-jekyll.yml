@@ -26,6 +26,11 @@ jobs:
           # Build your docs here (e.g., if using MkDocs, Sphinx, etc.)
           echo "Building docs..."
 
+      - name: Delete old artifacts
+        uses: gha-remove-artifacts@v2
+        with:
+          age: '0 seconds'  # Delete all previous artifacts
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
