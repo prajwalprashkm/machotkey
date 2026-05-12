@@ -1,5 +1,10 @@
 name: Deploy Pages
 
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
@@ -11,24 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false  # Don't clone submodules for Pages
+          submodules: false
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Build docs
         run: |
+          mkdir -p build
           cp -r docs/* build/
-
-      - name: Delete old artifacts
-        uses: actions/gha-remove-artifacts@v2
-        with:
-          age: '0 seconds'  # Delete all previous artifacts
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs'  # Path to your docs folder
+          path: 'build'
 
   deploy:
     needs: build
