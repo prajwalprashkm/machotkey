@@ -402,7 +402,7 @@
           <div class="step-num">3</div>
           <div class="step-body">
             <div class="step-title">Allow the app to run</div>
-            <div class="step-desc">Releases are unsigned due to the lack of a $99/year Apple Developer certificate. The first time you open Machotkey, macOS will block it. Go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down, and click <strong>Open Anyway</strong>. You only need to do this once. If macOS complains about the app being damaged, you can run <code>xattr -cr /Applications/machotkey.app</code> to remove the quarantine flag and allow it to run.</div>
+            <div class="step-desc">Releases are unsigned due to the lack of a $99/year Apple Developer certificate. The first time you open Machotkey, macOS will block it. Go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down, and click <strong>Open Anyway</strong>. You only need to do this once. If macOS complains about the app being damaged, you can run <code>xattr -cr /Applications/Machotkey.app</code> to remove the quarantine flag and allow it to run.</div>
           </div>
         </div>
       </div>
@@ -458,7 +458,7 @@ cmake --build build -j 8</pre>
           <div class="step-body">
             <div class="step-title">Run the app</div>
             <div class="step-desc">After a successful build, the app bundle is at:</div>
-            <pre>build/bin/machotkey.app</pre>
+            <pre>build/bin/Machotkey.app</pre>
             <div class="step-desc" style="margin-top:10px">Source builds are unsigned. macOS may require you to allow the app in <strong>System Settings → Privacy &amp; Security</strong> the first time you open it.</div>
           </div>
         </div>
@@ -525,7 +525,7 @@ end)</pre>
         <div class="step-num">4</div>
         <div class="step-body">
           <div class="step-title">Open the project in Machotkey</div>
-          <div class="step-desc">Launch <code>machotkey.app</code> and open your project folder. Machotkey will read the manifest, prompt for any permissions not yet granted, and start running your macro.</div>
+          <div class="step-desc">Launch <code>Machotkey.app</code> and open your project folder. Machotkey will read the manifest, prompt for any permissions not yet granted, and start running your macro.</div>
         </div>
       </div>
 
