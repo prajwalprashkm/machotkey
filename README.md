@@ -100,6 +100,8 @@ Outputs:
 
 Release-style optimizations are the default for single-configuration generators (`CMAKE_BUILD_TYPE` defaults to **Release**). Unsigned local builds are expected unless you add your own signing step.
 
+Note: Running `cmake --build` with just -j and no number may cause the build to stop mid way. If this happens, just use a number; the cached build files from the first run will persist and significant time will not be wasted.
+
 ### Maintainer workflow
 
 - **`CMakeLists.local.txt`** — optional local maintainer CMake entrypoint (not required for the default root build).

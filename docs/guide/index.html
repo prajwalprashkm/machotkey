@@ -450,7 +450,7 @@ cmake --build . -j 8</pre>
             <div class="step-desc" style="margin-top:10px">Or as an equivalent out-of-tree build:</div>
             <pre>cmake -S . -B build
 cmake --build build -j 8</pre>
-            <div class="step-desc" style="margin-top:10px">The <code>-j 8</code> flag sets the parallel job count — adjust it to match your CPU core count. The first build compiles OpenCV from source, which is significantly slower than subsequent incremental builds.</div>
+            <div class="step-desc" style="margin-top:10px">The <code>-j 8</code> flag sets the parallel job count — adjust it to match your CPU core count. The first build compiles OpenCV from source, which is significantly slower than subsequent incremental builds. If you run the command with just -j, the build may stop mid way. If this happens, just use a number; the cached build files from the first run will persist and significant time will not be wasted.</div>
           </div>
         </div>
         <div class="step">
