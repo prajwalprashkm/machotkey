@@ -38,6 +38,8 @@
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
+#include <array>
 #include <ApplicationServices/ApplicationServices.h>
 #include "input_interface.h"
 #include "screencapture.h"
@@ -174,7 +176,24 @@ std::atomic<int> write_pipe = -1, read_pipe = -1, log_read_pipe = -1;
 uint64_t current_hotkey_request_id = 1;
 ResponseManager hotkey_response_manager;
 
-std::vector<DrawCommand> draw_commands, cached_commands;
+struct CanvasDrawItem {
+    DrawCommand cmd;
+    std::vector<ImVec2> points;
+};
+
+std::vector<CanvasDrawItem> draw_commands, cached_commands;
+
+static void drain_read_pipe_bytes(int fd, size_t n) {
+    std::array<char, 8192> buf{};
+    while (n > 0) {
+        const size_t chunk = std::min(n, buf.size());
+        const ssize_t r = read(fd, buf.data(), chunk);
+        if (r <= 0) {
+            return;
+        }
+        n -= static_cast<size_t>(r);
+    }
+}
 std::mutex draw_command_mutex;
 std::atomic<bool> new_command(false);
 
@@ -1446,8 +1465,18 @@ int start_file_server(const std::string& data_path) {
 #include <atomic>
 #include <mutex>
 
-std::mutex ipc_mutex;
-std::recursive_mutex ui_lifetime_mutex;
+// Intentionally never freed: detached threads may still touch these after main() returns;
+// destroying std::mutex during static teardown caused libc++ "mutex lock failed: Invalid argument".
+namespace {
+std::mutex& get_host_ipc_mutex() {
+    static std::mutex* m = new std::mutex();
+    return *m;
+}
+std::recursive_mutex& get_ui_lifetime_mutex() {
+    static std::recursive_mutex* m = new std::recursive_mutex();
+    return *m;
+}
+}  // namespace
 
 static void destroy_all_macro_ui_windows_under_lock() {
     for (auto it = macro_ui_windows.begin(); it != macro_ui_windows.end(); ) {
@@ -1458,9 +1487,14 @@ static void destroy_all_macro_ui_windows_under_lock() {
     macro_ui_last_window_id = 0;
 }
 
+static std::atomic<bool> g_prepare_app_terminate_done{false};
+
 static void prepare_app_terminate() {
+    if (g_prepare_app_terminate_done.exchange(true, std::memory_order_acq_rel)) {
+        return;
+    }
     running.store(false, std::memory_order_release);
-    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    std::lock_guard<std::recursive_mutex> lock(get_ui_lifetime_mutex());
     destroy_all_macro_ui_windows_under_lock();
     if (main_win) {
         app.destroy_window(main_win);
@@ -1515,7 +1549,7 @@ void send_runner_throttle_set(uint32_t sleep_us) {
     if (w <= 0 || current_runner_pid <= 0) return;
     ThrottlePayload payload{sleep_us};
     IPCHeader header{MsgType::SYSTEM_THROTTLE_SET, static_cast<uint32_t>(sizeof(payload)), 0};
-    std::lock_guard<std::mutex> lock(ipc_mutex);
+    std::lock_guard<std::mutex> lock(get_host_ipc_mutex());
     write(w, &header, sizeof(header));
     write(w, &payload, sizeof(payload));
 }
@@ -1524,7 +1558,7 @@ void send_runner_throttle_clear() {
     const int w = write_pipe.load();
     if (w <= 0 || current_runner_pid <= 0) return;
     IPCHeader header{MsgType::SYSTEM_THROTTLE_CLEAR, 0, 0};
-    std::lock_guard<std::mutex> lock(ipc_mutex);
+    std::lock_guard<std::mutex> lock(get_host_ipc_mutex());
     write(w, &header, sizeof(header));
 }
 
@@ -1543,7 +1577,7 @@ void refresh_screen_capture_excluded_windows() {
 
 void apply_headless_mode(bool enabled) {
     headless_mode_enabled.store(enabled);
-    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    std::lock_guard<std::recursive_mutex> lock(get_ui_lifetime_mutex());
     if (enabled) {
         if (main_win) {
             app.destroy_window(main_win);
@@ -1566,14 +1600,14 @@ void apply_headless_mode(bool enabled) {
 
 void emit_status_line(const std::string& text, const std::string& kind) {
     if (headless_mode_enabled.load()) return;
-    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    std::lock_guard<std::recursive_mutex> lock(get_ui_lifetime_mutex());
     if (!main_win) return;
     main_win->send_to_js("window.addStatusLine(" + escape_string(text) + ", " + escape_string(kind) + ");");
 }
 
 void emit_console_lines(const std::string& text) {
     if (headless_mode_enabled.load()) return;
-    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    std::lock_guard<std::recursive_mutex> lock(get_ui_lifetime_mutex());
     if (!main_win) return;
     main_win->send_to_js("window.addConsoleLines(" + escape_string(text) + ");");
 }
@@ -1626,10 +1660,10 @@ void on_new_frame(CVPixelBufferRef buffer) {
 
     IPCHeader header = { MsgType::SYSTEM_SCREEN_FRAME_READY, 0, 0};
 
-    ipc_mutex.lock();
+    get_host_ipc_mutex().lock();
     // Send binary packet to the Runner
     write(write_pipe, &header, sizeof(header));
-    ipc_mutex.unlock();
+    get_host_ipc_mutex().unlock();
 
 }
 
@@ -1639,10 +1673,10 @@ void send_response(uint64_t request_id, Response response) {
     if (read_pipe > 0) {
         IPCHeader header = { MsgType::RESPONSE, sizeof(response), request_id };
 
-        ipc_mutex.lock();
+        get_host_ipc_mutex().lock();
         write(write_pipe, &header, sizeof(header));
         write(write_pipe, &response, sizeof(response));
-        ipc_mutex.unlock();
+        get_host_ipc_mutex().unlock();
     }
 }
 
@@ -1653,7 +1687,7 @@ WebViewWindow* get_macro_ui_window(uint32_t window_id) {
 }
 
 void close_macro_ui_window(uint32_t window_id) {
-    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    std::lock_guard<std::recursive_mutex> lock(get_ui_lifetime_mutex());
     auto it = macro_ui_windows.find(window_id);
     if (it == macro_ui_windows.end()) return;
     WebViewWindow* w = it->second;
@@ -1665,7 +1699,7 @@ void close_macro_ui_window(uint32_t window_id) {
 }
 
 void close_all_macro_ui_windows() {
-    std::lock_guard<std::recursive_mutex> lock(ui_lifetime_mutex);
+    std::lock_guard<std::recursive_mutex> lock(get_ui_lifetime_mutex());
     destroy_all_macro_ui_windows_under_lock();
 }
 
@@ -1686,7 +1720,7 @@ void forward_ui_event_to_runner(uint32_t window_id, const std::string& event_nam
         0
     };
 
-    std::lock_guard<std::mutex> lock(ipc_mutex);
+    std::lock_guard<std::mutex> lock(get_host_ipc_mutex());
     write(w, &header, sizeof(header));
     write(w, &meta, sizeof(meta));
     write(w, event_name.data(), meta.event_len);
@@ -1724,7 +1758,7 @@ void stop_macro() {
         }
         current_permission_grants.clear();
         {
-            std::lock_guard<std::recursive_mutex> ui_lock(ui_lifetime_mutex);
+            std::lock_guard<std::recursive_mutex> ui_lock(get_ui_lifetime_mutex());
             destroy_all_macro_ui_windows_under_lock();
 
             if (!headless_mode_enabled.load() && main_win) {
@@ -1850,10 +1884,10 @@ CGEventRef listener_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef
             IPCHeader header = { MsgType::TRIGGER_EVENT, sizeof(KeyCombo), current_hotkey_request_id};
 
             // Send binary packet to the Runner
-            ipc_mutex.lock();
+            get_host_ipc_mutex().lock();
             write(write_pipe, &header, sizeof(header));
             write(write_pipe, &current, sizeof(current));
-            ipc_mutex.unlock();
+            get_host_ipc_mutex().unlock();
 
             active_keybinds[current].active = true; // Mark as triggered
             
@@ -2152,10 +2186,10 @@ void monitor_data() {
 
                 IPCHeader send_header = { MsgType::SYSTEM_MOUSE_FULFILL_POSITION, sizeof(response),  header.request_id};
 
-                ipc_mutex.lock();
+                get_host_ipc_mutex().lock();
                 write(write_pipe, &send_header, sizeof(send_header));
                 write(write_pipe, &response, sizeof(response));
-                ipc_mutex.unlock();
+                get_host_ipc_mutex().unlock();
             }if(header.type == MsgType::SYSTEM_KEYBOARD_PRESS){
                 KeyboardData kd;
                 if(read(read_pipe, &kd, sizeof(kd)) > 0){
@@ -2244,10 +2278,10 @@ void monitor_data() {
 
                 IPCHeader send_header = { MsgType::RESPONSE, sizeof(dim),  header.request_id};
 
-                ipc_mutex.lock();
+                get_host_ipc_mutex().lock();
                 write(write_pipe, &send_header, sizeof(send_header));
                 write(write_pipe, &dim, sizeof(dim));
-                ipc_mutex.unlock();
+                get_host_ipc_mutex().unlock();
             }else if(header.type == MsgType::SYSTEM_SCREEN_START_CAPTURE){
                 ScreenCaptureRequest req;
                 if(read(read_pipe, &req, sizeof(req)) > 0){
@@ -2307,10 +2341,10 @@ void monitor_data() {
 
                     send_response(header.request_id, { true });
 
-                    ipc_mutex.lock();
+                    get_host_ipc_mutex().lock();
                     write(write_pipe, &send_header, sizeof(send_header));
                     write(write_pipe, &metadata, sizeof(metadata));
-                    ipc_mutex.unlock();
+                    get_host_ipc_mutex().unlock();
                 }
             }else if(header.type == MsgType::SYSTEM_SCREEN_STOP_CAPTURE){
                 DEBUG_LOG("[MAIN]: Received screen capture stop command." << std::endl);
@@ -2321,70 +2355,114 @@ void monitor_data() {
                     main_shm.remove_shm();
                 }
             }else if(header.type == MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND){
-                DrawCommand cmd;
-                //DEBUG_LOG("[MAIN]: Processing draw command." << std::endl);
-                if(read(read_pipe, &cmd, sizeof(cmd)) > 0){
-                    cmd.data = header.request_id;
-                    if(cmd.type == DrawCmdType::CLEAR){
-                        cached_commands.clear();
-                        draw_command_mutex.lock();
-                        draw_commands.clear();
-                        draw_command_mutex.unlock();
-                        send_response(cmd.data, {true});
+                if (header.payload_size < sizeof(DrawCommand)) {
+                    continue;
+                }
+                DrawCommand cmd{};
+                if (read(read_pipe, &cmd, sizeof(cmd)) <= 0) {
+                    break;
+                }
+                cmd.data = header.request_id;
+
+                const size_t extra = static_cast<size_t>(header.payload_size) - sizeof(DrawCommand);
+                std::vector<ImVec2> poly;
+                if (extra > kMaxCanvasPolyExtraBytes || (extra % (2 * sizeof(float))) != 0) {
+                    drain_read_pipe_bytes(read_pipe, extra);
+                    continue;
+                }
+                if (extra > 0) {
+                    std::vector<float> raw(extra / sizeof(float));
+                    if (read(read_pipe, raw.data(), extra) <= 0) {
+                        break;
                     }
-                    //DEBUG_LOG("[MAIN]: Received draw command of type " << (int)cmd.type << " at (" << cmd.w << ", " << cmd.h << ")." << std::endl);
-                    bool existing = false;
-                    int i = 0;
+                    poly.reserve(raw.size() / 2);
+                    for (size_t i = 0; i + 1 < raw.size(); i += 2) {
+                        poly.emplace_back(raw[i], raw[i + 1]);
+                    }
+                }
+
+                if (cmd.type == DrawCmdType::CLEAR) {
+                    cached_commands.clear();
                     draw_command_mutex.lock();
-                    auto id_str = std::string(cmd.id);
-                    bool searching_id = id_str != "";
-                    bool searching_class = cmd.class_count > 0;
-                    if(searching_id){
-                        for(auto& existing_cmd : draw_commands){
-                            if(std::string(existing_cmd.id) == id_str){
-                                if(cmd.type == DrawCmdType::REMOVE){
-                                    // Remove command
-                                    draw_commands.erase(draw_commands.begin() + i);
-                                    draw_command_mutex.unlock();
-                                    existing = true;
-                                    break;
-                                }
-                                // Update existing command
-                                existing_cmd = cmd;
+                    draw_commands.clear();
+                    draw_command_mutex.unlock();
+                    send_response(cmd.data, {true});
+                    new_command = true;
+                    continue;
+                }
+
+                bool geom_ok = true;
+                if (draw_cmd_uses_point_payload(cmd.type)) {
+                    if (cmd.type == DrawCmdType::POLYGON && poly.size() < 3) {
+                        geom_ok = false;
+                    } else if (cmd.type == DrawCmdType::POLYLINE && poly.size() < 2) {
+                        geom_ok = false;
+                    } else if (cmd.type == DrawCmdType::QUADRATIC_CURVE && poly.size() != 3) {
+                        geom_ok = false;
+                    } else if (cmd.type == DrawCmdType::BEZIER_CURVE && poly.size() != 4) {
+                        geom_ok = false;
+                    }
+                } else if (extra > 0) {
+                    geom_ok = false;
+                }
+                if (!geom_ok) {
+                    continue;
+                }
+
+                bool existing = false;
+                int i = 0;
+                bool did_unlock = false;
+                draw_command_mutex.lock();
+                const auto id_str = std::string(cmd.id);
+                const bool searching_id = id_str != "";
+                const bool searching_class = cmd.class_count > 0;
+                if (searching_id) {
+                    for (auto& existing_item : draw_commands) {
+                        if (std::string(existing_item.cmd.id) == id_str) {
+                            if (cmd.type == DrawCmdType::REMOVE) {
+                                draw_commands.erase(draw_commands.begin() + i);
                                 draw_command_mutex.unlock();
+                                did_unlock = true;
                                 existing = true;
                                 break;
                             }
-                            i += 1;
+                            existing_item.cmd = cmd;
+                            existing_item.points = std::move(poly);
+                            draw_command_mutex.unlock();
+                            did_unlock = true;
+                            existing = true;
+                            break;
                         }
-                    }else if(searching_class && cmd.type == DrawCmdType::REMOVE){
-                        std::vector<int> to_remove;
-                        bool remove = false;
-                        for(auto& existing_cmd : draw_commands){
-                            remove = false;
-                            for(uint32_t c = 0; c < cmd.class_count; c++){
-                                remove = existing_cmd.has_class(cmd.classes[c]);
-                                //std::cout << "Checking class " << cmd.classes[c] << " against existing command ID " << existing_cmd.id << ": " << (remove ? "MATCH" : "NO MATCH") << std::endl;
-                                if(!remove) break;
-                            }
-                            if(remove){
-                                to_remove.push_back(i);
-                            }
-                            i += 1;
-                        }
-                        // Remove in reverse order to avoid index shifting
-                        for(int idx = to_remove.size() - 1; idx >= 0; idx--){
-                            draw_commands.erase(draw_commands.begin() + to_remove[idx]);
-                        }
-                        draw_command_mutex.unlock();
+                        i += 1;
                     }
-                    if(!existing && cmd.type != DrawCmdType::REMOVE){
-                        draw_commands.push_back(cmd);
-                        draw_command_mutex.unlock();
+                } else if (searching_class && cmd.type == DrawCmdType::REMOVE) {
+                    std::vector<int> to_remove;
+                    for (auto& existing_item : draw_commands) {
+                        bool remove_cmd = false;
+                        for (uint32_t c = 0; c < cmd.class_count; c++) {
+                            remove_cmd = existing_item.cmd.has_class(cmd.classes[c]);
+                            if (!remove_cmd) {
+                                break;
+                            }
+                        }
+                        if (remove_cmd) {
+                            to_remove.push_back(i);
+                        }
+                        i += 1;
                     }
-                    // Indicate new command available
-                    new_command = true;
+                    for (int idx = static_cast<int>(to_remove.size()) - 1; idx >= 0; idx--) {
+                        draw_commands.erase(draw_commands.begin() + to_remove[idx]);
+                    }
+                    draw_command_mutex.unlock();
+                    did_unlock = true;
                 }
+                if (!did_unlock) {
+                    if (!existing && cmd.type != DrawCmdType::REMOVE) {
+                        draw_commands.push_back(CanvasDrawItem{cmd, std::move(poly)});
+                    }
+                    draw_command_mutex.unlock();
+                }
+                new_command = true;
             }else if(header.type == MsgType::SYSTEM_SCREEN_CANVAS_SET_DISPLAY){
                 MoveOverlayToDisplay(header.payload_size);
                 send_response(header.request_id, {true});
@@ -2432,7 +2510,7 @@ void monitor_data() {
                 }
 
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     if (current_project_dir.empty()) {
                         emit_status_line("✗ Cannot open UI: no project loaded", "error");
                         send_response(header.request_id, {false});
@@ -2541,7 +2619,7 @@ void monitor_data() {
                 buf[js_len] = '\0';
                 const std::string js(buf.data());
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     WebViewWindow* target = get_macro_ui_window(target_id);
                     if (!target) {
                         send_response(header.request_id, {false});
@@ -2575,7 +2653,7 @@ void monitor_data() {
                 }
                 buf[meta.data_len] = '\0';
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     WebViewWindow* target = get_macro_ui_window(meta.window_id);
                     if (!target) {
                         send_response(header.request_id, {false});
@@ -2599,7 +2677,7 @@ void monitor_data() {
                     continue;
                 }
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     WebViewWindow* target = get_macro_ui_window(payload.window_id);
                     if (!target) {
                         send_response(header.request_id, {false});
@@ -2619,7 +2697,7 @@ void monitor_data() {
                     continue;
                 }
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     WebViewWindow* target = get_macro_ui_window(payload.window_id);
                     if (!target) {
                         send_response(header.request_id, {false});
@@ -2639,7 +2717,7 @@ void monitor_data() {
                     continue;
                 }
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     WebViewWindow* target = get_macro_ui_window(payload.window_id);
                     if (!target) {
                         send_response(header.request_id, {false});
@@ -2659,7 +2737,7 @@ void monitor_data() {
                     continue;
                 }
                 {
-                    std::lock_guard<std::recursive_mutex> ui_guard(ui_lifetime_mutex);
+                    std::lock_guard<std::recursive_mutex> ui_guard(get_ui_lifetime_mutex());
                     WebViewWindow* target = get_macro_ui_window(payload.window_id);
                     if (!target) {
                         send_response(header.request_id, {false});
@@ -2812,7 +2890,9 @@ void render(){
 
     ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-    for (const auto& cmd : cached_commands) {
+    for (const auto& item : cached_commands) {
+        const DrawCommand& cmd = item.cmd;
+
         // ImGui expects colors in ABGR format (U32)
         // If your color is 0xRRGGBBAA, you might need to reshuffle bits
         ImU32 color = RGBA_to_ABGR(cmd.color); 
@@ -2841,6 +2921,123 @@ void render(){
             case DrawCmdType::LINE: {
                 // For lines, x/y is start, w/h is end
                 draw_list->AddLine(ImVec2(cmd.x, cmd.y), ImVec2(cmd.w, cmd.h), color, cmd.thickness);
+                break;
+            }
+
+            case DrawCmdType::ARC: {
+                const ImVec2 c(cmd.x, cmd.y);
+                const float r = cmd.w;
+                float a0 = cmd.angle_start;
+                float a1 = cmd.angle_end;
+                if (cmd.flags & kDrawCmdFlagCounterclockwise) {
+                    std::swap(a0, a1);
+                }
+                if (cmd.fill) {
+                    const ImU32 fc = RGBA_to_ABGR(cmd.fill_color);
+                    draw_list->PathClear();
+                    draw_list->PathLineTo(c);
+                    draw_list->PathArcTo(c, r, a0, a1);
+                    draw_list->PathFillConvex(fc);
+                }
+                draw_list->PathClear();
+                draw_list->PathArcTo(c, r, a0, a1);
+                draw_list->PathStroke(color, ImDrawFlags_None, cmd.thickness);
+                break;
+            }
+
+            case DrawCmdType::CIRCLE: {
+                const ImVec2 c(cmd.x, cmd.y);
+                const float rad = cmd.w;
+                if (cmd.fill) {
+                    draw_list->AddCircleFilled(c, rad, RGBA_to_ABGR(cmd.fill_color));
+                }
+                draw_list->AddCircle(c, rad, color, 0, cmd.thickness);
+                break;
+            }
+
+            case DrawCmdType::ELLIPSE: {
+                const ImVec2 c(cmd.x, cmd.y);
+                const ImVec2 radii(cmd.w, cmd.h);
+                float a0 = cmd.angle_start;
+                float a1 = cmd.angle_end;
+                if (cmd.flags & kDrawCmdFlagCounterclockwise) {
+                    std::swap(a0, a1);
+                }
+                const float span = std::fabs(a1 - a0);
+                const bool full_ellipse = (span >= float(M_PI) * 2.0f - 1e-2f)
+                    || (cmd.angle_start == 0.f && cmd.angle_end >= 6.28f);
+                if (full_ellipse) {
+                    if (cmd.fill) {
+                        draw_list->AddEllipseFilled(c, radii, RGBA_to_ABGR(cmd.fill_color), cmd.rotation);
+                    }
+                    draw_list->AddEllipse(c, radii, color, cmd.rotation, 0, cmd.thickness);
+                } else {
+                    if (cmd.fill) {
+                        draw_list->PathClear();
+                        draw_list->PathLineTo(c);
+                        draw_list->PathEllipticalArcTo(c, radii, cmd.rotation, a0, a1);
+                        draw_list->PathFillConvex(RGBA_to_ABGR(cmd.fill_color));
+                    }
+                    draw_list->PathClear();
+                    draw_list->PathEllipticalArcTo(c, radii, cmd.rotation, a0, a1);
+                    draw_list->PathStroke(color, ImDrawFlags_None, cmd.thickness);
+                }
+                break;
+            }
+
+            case DrawCmdType::POLYGON: {
+                if (item.points.size() < 3) {
+                    break;
+                }
+                if (cmd.fill) {
+                    draw_list->AddConvexPolyFilled(
+                        item.points.data(),
+                        static_cast<int>(item.points.size()),
+                        RGBA_to_ABGR(cmd.fill_color));
+                }
+                draw_list->AddPolyline(
+                    item.points.data(),
+                    static_cast<int>(item.points.size()),
+                    color,
+                    ImDrawFlags_Closed,
+                    cmd.thickness);
+                break;
+            }
+
+            case DrawCmdType::POLYLINE: {
+                if (item.points.size() < 2) {
+                    break;
+                }
+                draw_list->AddPolyline(
+                    item.points.data(),
+                    static_cast<int>(item.points.size()),
+                    color,
+                    0,
+                    cmd.thickness);
+                break;
+            }
+
+            case DrawCmdType::QUADRATIC_CURVE: {
+                if (item.points.size() != 3) {
+                    break;
+                }
+                const ImVec2* p = item.points.data();
+                draw_list->PathClear();
+                draw_list->PathLineTo(p[0]);
+                draw_list->PathBezierQuadraticCurveTo(p[1], p[2]);
+                draw_list->PathStroke(color, 0, cmd.thickness);
+                break;
+            }
+
+            case DrawCmdType::BEZIER_CURVE: {
+                if (item.points.size() != 4) {
+                    break;
+                }
+                const ImVec2* p = item.points.data();
+                draw_list->PathClear();
+                draw_list->PathLineTo(p[0]);
+                draw_list->PathBezierCubicCurveTo(p[1], p[2], p[3]);
+                draw_list->PathStroke(color, 0, cmd.thickness);
                 break;
             }
 

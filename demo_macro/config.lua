@@ -20,14 +20,15 @@ M.TARGET_FPS = u("TARGET_FPS", 60)
 M.SUITE_PHASE_MS = u("SUITE_PHASE_MS", 4500)
 M.METRICS_WINDOW_FRAMES = u("METRICS_WINDOW_FRAMES", 30)
 
--- Full-frame color: how many find_color calls to pack into one capture callback
-M.COLOR_SEARCHES_PER_FRAME = u("COLOR_SEARCHES_PER_FRAME", 768)
+-- Batched phases (color / input / fs): run as many ops as fit in each capture callback
+-- without exceeding a fraction of one frame slot at TARGET_FPS (see workloads.lua).
+M.FRAME_BUDGET_FRACTION = u("FRAME_BUDGET_FRACTION", 0.88)
+M.ADAPTIVE_MAX_OPS_PER_FRAME = u("ADAPTIVE_MAX_OPS_PER_FRAME", 262144)
+M.INPUT_ADAPTIVE_STRIDE = u("INPUT_ADAPTIVE_STRIDE", 32)
 
 -- OpenCV: full-frame scene vs small corner template; one match_template per frame (timed)
 M.OPENCV_TEMPLATE_SIZE = u("OPENCV_TEMPLATE_SIZE", 64)
 
-M.INPUT_GETPOSITION_BATCH = u("INPUT_GETPOSITION_BATCH", 256)
-M.FS_READS_PER_FRAME = u("FS_READS_PER_FRAME", 32)
 M.FS_BENCH_PATH = u("FS_BENCH_PATH", "config.lua")
 
 -- Legacy layout ratios (unused for color/OCR; kept for manifest compatibility)

@@ -1,1 +1,10 @@
-return {}
+-- Written by demo macro UI. Restart to apply.
+return {
+  ADAPTIVE_MAX_OPS_PER_FRAME = 262144,
+  FRAME_BUDGET_FRACTION = 0.88,
+  INPUT_ADAPTIVE_STRIDE = 32,
+  METRICS_WINDOW_FRAMES = 30,
+  OPENCV_TEMPLATE_SIZE = 64,
+  SUITE_PHASE_MS = 4500,
+  TARGET_FPS = 60,
+}

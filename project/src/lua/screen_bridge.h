@@ -12,6 +12,7 @@
 #include "sol/variadic_args.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include "shared.h"
 #include "ipc_protocol.h"
 #include "utils.h"
@@ -142,6 +143,125 @@ inline auto send_draw_command(MsgType type, DrawCommand cmd) {
 #endif
     
     return header.request_id;
+}
+
+inline uint64_t send_draw_with_points(MsgType type, DrawCommand cmd, const std::vector<std::pair<float, float>>& pts) {
+    const size_t extra_size = pts.size() * 2u * sizeof(float);
+    if (extra_size > kMaxCanvasPolyExtraBytes) {
+        throw sol::error("canvas: too many points in path");
+    }
+    auto id = current_response_id.fetch_add(1);
+    const uint32_t payload_u32 = static_cast<uint32_t>(sizeof(DrawCommand) + extra_size);
+    IPCHeader header = { type, payload_u32, id + 1 };
+
+    ipc_mutex.lock();
+    ssize_t n1 = write(BINARY_OUT_FD, &header, sizeof(header));
+    ssize_t n2 = write(BINARY_OUT_FD, &cmd, sizeof(cmd));
+    for (const auto& pr : pts) {
+        float xy[2] = { pr.first, pr.second };
+        write(BINARY_OUT_FD, xy, sizeof(xy));
+    }
+    ipc_mutex.unlock();
+    (void)n1;
+    (void)n2;
+    return header.request_id;
+}
+
+inline void canvas_apply_common_options(DrawCommand& cmd, std::optional<sol::table> options) {
+    if (!options) {
+        std::strncpy(cmd.id, "", sizeof(cmd.id));
+        cmd.class_count = 0;
+        return;
+    }
+    sol::table opts = options.value();
+    if (opts["id"].is<std::string>()) {
+        std::strncpy(cmd.id, opts.get<std::string>("id").c_str(), sizeof(cmd.id));
+    } else {
+        std::strncpy(cmd.id, "", sizeof(cmd.id));
+    }
+    if (opts["thickness"].is<float>()) {
+        cmd.thickness = opts.get<float>("thickness");
+    } else if (opts["thickness"].is<double>()) {
+        cmd.thickness = static_cast<float>(opts.get<double>("thickness"));
+    }
+    if (opts["classes"].is<sol::table>()) {
+        sol::table classes = opts.get<sol::table>("classes");
+        size_t class_count = 0;
+        for (auto& pair : classes) {
+            if (class_count >= 8) break;
+            if (pair.second.is<std::string>()) {
+                std::string class_name = pair.second.as<std::string>();
+                std::strncpy(cmd.classes[class_count], class_name.c_str(), 32);
+                class_count++;
+            }
+        }
+        cmd.class_count = static_cast<uint32_t>(class_count);
+    } else {
+        cmd.class_count = 0;
+    }
+    if (opts["fill"].is<int>()) {
+        cmd.fill_color = static_cast<uint32_t>(opts.get<int>("fill"));
+        cmd.fill = true;
+    } else if (opts["fill"].is<double>()) {
+        cmd.fill_color = static_cast<uint32_t>(opts.get<double>("fill"));
+        cmd.fill = true;
+    } else {
+        cmd.fill = false;
+    }
+}
+
+inline std::vector<std::pair<float, float>> canvas_read_xy_points(sol::table points_table) {
+    std::vector<std::pair<float, float>> out;
+    const size_t n = points_table.size();
+    out.reserve(n);
+    for (size_t i = 1; i <= n; ++i) {
+        sol::object o = points_table[i];
+        if (!o.is<sol::table>()) {
+            throw sol::error("canvas: expected array of point tables {{x,y}, ...} or {{x,y}, ...}");
+        }
+        sol::table pt = o.as<sol::table>();
+        float x = 0.f;
+        float y = 0.f;
+        if (pt[1].valid() && pt[2].valid()) {
+            sol::object ox = pt[1];
+            sol::object oy = pt[2];
+            if (ox.is<double>()) {
+                x = static_cast<float>(ox.as<double>());
+            } else if (ox.is<float>()) {
+                x = ox.as<float>();
+            } else {
+                x = static_cast<float>(ox.as<lua_Number>());
+            }
+            if (oy.is<double>()) {
+                y = static_cast<float>(oy.as<double>());
+            } else if (oy.is<float>()) {
+                y = oy.as<float>();
+            } else {
+                y = static_cast<float>(oy.as<lua_Number>());
+            }
+        } else if (pt["x"].valid() && pt["y"].valid()) {
+            sol::object ox = pt["x"];
+            sol::object oy = pt["y"];
+            if (ox.is<double>()) {
+                x = static_cast<float>(ox.as<double>());
+            } else if (ox.is<float>()) {
+                x = ox.as<float>();
+            } else {
+                x = static_cast<float>(ox.as<lua_Number>());
+            }
+            if (oy.is<double>()) {
+                y = static_cast<float>(oy.as<double>());
+            } else if (oy.is<float>()) {
+                y = oy.as<float>();
+            } else {
+                y = static_cast<float>(oy.as<lua_Number>());
+            }
+        } else {
+            throw sol::error("canvas: each point must be {x=, y=} or {x, y} with numeric keys 1,2");
+        }
+        out.emplace_back(x, y);
+    }
+    return out;
 }
 
 class ScreenBridge {
@@ -583,6 +703,130 @@ public:
             }
 
             send_draw_command(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd);
+        };
+
+        canvas["arc"] = [](float x, float y, float radius, float start_angle, float end_angle, uint32_t color, std::optional<sol::table> options) {
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::ARC;
+            cmd.x = x;
+            cmd.y = y;
+            cmd.w = radius;
+            cmd.angle_start = start_angle;
+            cmd.angle_end = end_angle;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            if (options) {
+                sol::table opts = options.value();
+                if (opts["anticlockwise"].is<bool>() && opts.get<bool>("anticlockwise")) {
+                    cmd.flags |= kDrawCmdFlagCounterclockwise;
+                }
+            }
+            canvas_apply_common_options(cmd, options);
+            send_draw_command(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd);
+        };
+
+        canvas["circle"] = [](float x, float y, float radius, uint32_t color, std::optional<sol::table> options) {
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::CIRCLE;
+            cmd.x = x;
+            cmd.y = y;
+            cmd.w = radius;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            canvas_apply_common_options(cmd, options);
+            send_draw_command(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd);
+        };
+
+        canvas["ellipse"] = [](float x, float y, float radius_x, float radius_y, uint32_t color, std::optional<sol::table> options) {
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::ELLIPSE;
+            cmd.x = x;
+            cmd.y = y;
+            cmd.w = radius_x;
+            cmd.h = radius_y;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            cmd.rotation = 0.f;
+            cmd.angle_start = 0.f;
+            cmd.angle_end = 6.2831855f;
+            if (options) {
+                sol::table opts = options.value();
+                if (opts["rotation"].is<float>()) {
+                    cmd.rotation = opts.get<float>("rotation");
+                } else if (opts["rotation"].is<double>()) {
+                    cmd.rotation = static_cast<float>(opts.get<double>("rotation"));
+                }
+                if (opts["start_angle"].is<float>()) {
+                    cmd.angle_start = opts.get<float>("start_angle");
+                } else if (opts["start_angle"].is<double>()) {
+                    cmd.angle_start = static_cast<float>(opts.get<double>("start_angle"));
+                }
+                if (opts["end_angle"].is<float>()) {
+                    cmd.angle_end = opts.get<float>("end_angle");
+                } else if (opts["end_angle"].is<double>()) {
+                    cmd.angle_end = static_cast<float>(opts.get<double>("end_angle"));
+                }
+                if (opts["anticlockwise"].is<bool>() && opts.get<bool>("anticlockwise")) {
+                    cmd.flags |= kDrawCmdFlagCounterclockwise;
+                }
+            }
+            canvas_apply_common_options(cmd, options);
+            send_draw_command(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd);
+        };
+
+        canvas["polygon"] = [](sol::table points, uint32_t color, std::optional<sol::table> options) {
+            std::vector<std::pair<float, float>> pts = canvas_read_xy_points(points);
+            if (pts.size() < 3) {
+                throw sol::error("canvas.polygon: need at least 3 points");
+            }
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::POLYGON;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            canvas_apply_common_options(cmd, options);
+            send_draw_with_points(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd, pts);
+        };
+
+        canvas["polyline"] = [](sol::table points, uint32_t color, std::optional<sol::table> options) {
+            std::vector<std::pair<float, float>> pts = canvas_read_xy_points(points);
+            if (pts.size() < 2) {
+                throw sol::error("canvas.polyline: need at least 2 points");
+            }
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::POLYLINE;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            canvas_apply_common_options(cmd, options);
+            cmd.fill = false;
+            send_draw_with_points(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd, pts);
+        };
+
+        canvas["quadratic_curve"] = [](sol::table points, uint32_t color, std::optional<sol::table> options) {
+            std::vector<std::pair<float, float>> pts = canvas_read_xy_points(points);
+            if (pts.size() != 3) {
+                throw sol::error("canvas.quadratic_curve: need exactly 3 points (start, control, end)");
+            }
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::QUADRATIC_CURVE;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            canvas_apply_common_options(cmd, options);
+            cmd.fill = false;
+            send_draw_with_points(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd, pts);
+        };
+
+        canvas["bezier_curve"] = [](sol::table points, uint32_t color, std::optional<sol::table> options) {
+            std::vector<std::pair<float, float>> pts = canvas_read_xy_points(points);
+            if (pts.size() != 4) {
+                throw sol::error("canvas.bezier_curve: need exactly 4 points (start, c1, c2, end)");
+            }
+            DrawCommand cmd{};
+            cmd.type = DrawCmdType::BEZIER_CURVE;
+            cmd.color = color;
+            cmd.thickness = 1.0f;
+            canvas_apply_common_options(cmd, options);
+            cmd.fill = false;
+            send_draw_with_points(MsgType::SYSTEM_SCREEN_CANVAS_DRAW_COMMAND, cmd, pts);
         };
 
         canvas["remove_by_id"] = [](std::string id){

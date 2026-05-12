@@ -67,11 +67,11 @@
       <h2>What each phase does</h2>
       <ul class="expl">
         <li><strong>idle</strong> — capture + canvas only (baseline).</li>
-        <li><strong>color</strong> — many <code>find_color</code> scans over the <strong>full capture frame</strong> (RGB/tolerance sweep).</li>
+        <li><strong>color</strong> — <code>find_color</code> on the <strong>full frame</strong> until the adaptive time budget for <code>TARGET_FPS</code> is used (see tuning).</li>
         <li><strong>ocr_fast</strong> / <strong>ocr_accurate</strong> — one full-frame <code>recognize_text</code> per frame (timing = that single pass).</li>
-        <li><strong>input</strong> — <code>mouse.get_position</code> batch only (no synthetic clicks).</li>
+        <li><strong>input</strong> — <code>mouse.get_position</code> in the same adaptive budget (no synthetic clicks).</li>
         <li><strong>opencv</strong> — one full-frame pipeline (Mats + <code>match_template</code>) <strong>after you press OK</strong> on the CPU warning; until then this phase is idle workload.</li>
-        <li><strong>fs</strong> — repeated manifest <code>read_all</code> on <code>config.lua</code>.</li>
+        <li><strong>fs</strong> — <code>read_all</code> on <code>config.lua</code> until the budget is used.</li>
       </ul>
     </section>
   </div>

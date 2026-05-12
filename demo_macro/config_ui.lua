@@ -208,10 +208,10 @@ function M.setup(config, state)
       TARGET_FPS = config.TARGET_FPS,
       SUITE_PHASE_MS = config.SUITE_PHASE_MS,
       METRICS_WINDOW_FRAMES = config.METRICS_WINDOW_FRAMES,
-      COLOR_SEARCHES_PER_FRAME = config.COLOR_SEARCHES_PER_FRAME,
+      FRAME_BUDGET_FRACTION = config.FRAME_BUDGET_FRACTION,
+      ADAPTIVE_MAX_OPS_PER_FRAME = config.ADAPTIVE_MAX_OPS_PER_FRAME,
+      INPUT_ADAPTIVE_STRIDE = config.INPUT_ADAPTIVE_STRIDE,
       OPENCV_TEMPLATE_SIZE = config.OPENCV_TEMPLATE_SIZE,
-      INPUT_GETPOSITION_BATCH = config.INPUT_GETPOSITION_BATCH,
-      FS_READS_PER_FRAME = config.FS_READS_PER_FRAME,
     }
     win:run_js("window.demoApplyConfig(JSON.parse(" .. js_string_literal(json_for_ui(patch)) .. "));")
     M.push_runtime(state)

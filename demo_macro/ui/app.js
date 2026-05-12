@@ -5,10 +5,10 @@
     ["TARGET_FPS", "Target FPS", 1, 240, 1],
     ["SUITE_PHASE_MS", "Suite phase (ms)", 500, 60000, 100],
     ["METRICS_WINDOW_FRAMES", "Metrics window (frames)", 10, 120, 1],
-    ["COLOR_SEARCHES_PER_FRAME", "Color searches (full frame)", 1, 4096, 1],
+    ["FRAME_BUDGET_FRACTION", "Frame time budget (0–1)", 0.5, 0.98, 0.01],
+    ["ADAPTIVE_MAX_OPS_PER_FRAME", "Max ops / frame (cap)", 1024, 2097152, 1024],
+    ["INPUT_ADAPTIVE_STRIDE", "Input: check clock every N ops", 1, 512, 1],
     ["OPENCV_TEMPLATE_SIZE", "OpenCV template square (px)", 8, 256, 1],
-    ["INPUT_GETPOSITION_BATCH", "get_position batch", 1, 4096, 1],
-    ["FS_READS_PER_FRAME", "FS reads / frame", 1, 256, 1],
   ];
 
   var currentPhase = "idle";

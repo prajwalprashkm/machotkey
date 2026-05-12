@@ -13,14 +13,14 @@ This project is a **readable demo** of Machotkey macro APIs, shaped like **`macr
 | Phase | Load |
 |--------|------|
 | **idle** | Baseline: only capture + canvas updates. |
-| **color** | Many full-frame `system.screen.find_color` calls per frame (RGB / tolerance sweep). |
+| **color** | Full-frame `find_color` as many times per callback as fit in **`FRAME_BUDGET_FRACTION × (1/TARGET_FPS)`** (capped by **`ADAPTIVE_MAX_OPS_PER_FRAME`**). |
 | **ocr_fast** | **One** full-frame `recognize_text({})` per frame — timing reports that single OCR pass. |
 | **ocr_accurate** | **One** `ocr.accurate` full-frame pass per frame (timing = that pass). |
-| **input** | Batch `system.mouse.get_position` only (no synthetic mouse clicks). |
+| **input** | `mouse.get_position` in the same adaptive budget (time check every **`INPUT_ADAPTIVE_STRIDE`** ops). |
 | **opencv** | **One** pipeline per frame after you confirm the **OpenCV CPU** dialog in the panel (**OK**). Until then the phase is selected but no OpenCV work runs; the **suite** also waits on **OK** before its timer advances. |
-| **fs** | Several `system.fs.read_all("config.lua")` per frame (manifest allowlist). |
+| **fs** | `fs.read_all` on `config.lua` repeatedly within the same adaptive budget. |
 
-Batched phases (**color**, **input**, **fs**) time a whole batch per callback; **`action_ops_per_sec`** is **`sum(ops) ÷ sum(workload µs)`** over the window (throughput of the timed work). **OCR** and **OpenCV** use **one** timed op per callback. The HUD **last batch** line is the most recent callback only; **`action_avg_us_per_op`** is **`sum(workload µs) ÷ sum(ops)`** over the full window.
+Batched phases (**color**, **input**, **fs**) grow each callback’s batch until wall time reaches the budget (or the op cap). **`action_ops_per_sec`** is **`sum(ops) ÷ sum(workload µs)`** over the metrics window. **OCR** and **OpenCV** still use **one** timed op per callback. The HUD **last batch** line is the most recent callback only; **`action_avg_us_per_op`** is **`sum(workload µs) ÷ sum(ops)`** over the full window.
 
 Metrics for the **current** phase are recomputed every **`METRICS_WINDOW_FRAMES`** capture callbacks and stored under `state.bench_results[phase]` (one row of keys per phase, no duplicate field names).
 
@@ -60,7 +60,7 @@ The WebView **What each JSON field means** section matches these keys.
 
 ## Safety note
 
-The **input** phase only stresses **mouse position queries**, not random clicks. **OCR** and **OpenCV** scale sharply with capture resolution; **`OPENCV_TEMPLATE_SIZE`** is still tunable in the panel / `config_user.lua`.
+The **input** phase only stresses **mouse position queries**, not random clicks. **`FRAME_BUDGET_FRACTION`** (e.g. `0.88`) leaves headroom so callbacks are less likely to stall the capture clock; raise **`TARGET_FPS`** to tighten the budget. **`ADAPTIVE_MAX_OPS_PER_FRAME`** prevents runaway loops. **OCR** and **OpenCV** scale sharply with capture resolution; **`OPENCV_TEMPLATE_SIZE`** is tunable in the panel / `config_user.lua`.
 
 ## License
 

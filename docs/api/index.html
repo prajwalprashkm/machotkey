@@ -949,6 +949,121 @@ system.screen.canvas.rect(
       <pre class="example-code">system.screen.canvas.line(0, 0, 500, 500, 0x00FFFFFF, { thickness = 4.0 })</pre>
     </div>
 
+    <div class="entry" id="fn-canvas-arc">
+      <div class="entry-name"><span>system.screen.canvas.arc</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Circular arc (angles in radians, like HTML Canvas <code>arc</code>). Stroke always drawn; optional wedge fill from center.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Center</td></tr>
+        <tr><td><code>radius</code></td><td><code>number</code></td><td>Radius in pixels</td></tr>
+        <tr><td><code>start_angle, end_angle</code></td><td><code>number</code></td><td>Radians (e.g. <code>0</code> to <code>math.pi</code>)</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA stroke color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, fill?: integer, classes?, anticlockwise?: boolean }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.arc(400, 400, 80, 0, math.pi, 0xFFAA00FF, { thickness = 3, fill = 0xFFAA0044 })</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-circle">
+      <div class="entry-name"><span>system.screen.canvas.circle</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Full circle (outline + optional fill).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Center</td></tr>
+        <tr><td><code>radius</code></td><td><code>number</code></td><td>Radius</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA stroke color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, fill?: integer, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.circle(200, 200, 50, 0x22C55EFF, { fill = 0x22C55E99 })</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-ellipse">
+      <div class="entry-name"><span>system.screen.canvas.ellipse</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Ellipse with optional rotation and partial arc (defaults to full ellipse, <code>0</code> … <code>2π</code>).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>x, y</code></td><td><code>number</code></td><td>Center</td></tr>
+        <tr><td><code>radius_x, radius_y</code></td><td><code>number</code></td><td>Semi-axes</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA stroke color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ rotation?, start_angle?, end_angle?, anticlockwise?, id?, thickness?, fill?, classes? }</code> — angles in radians</td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.ellipse(300, 300, 120, 60, 0x6366F1FF, {
+  rotation = 0.4,
+  fill = 0x6366F133,
+  thickness = 2,
+})</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-polygon">
+      <div class="entry-name"><span>system.screen.canvas.polygon</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Closed polygon (outline + optional fill). Filled paths use a convex fill; concave shapes may look incorrect when <code>fill</code> is set—use <code>polyline</code> or stroke-only if needed.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>points</code></td><td><code>table</code></td><td>At least 3 vertices: <code>{ {x=,y=}, ... }</code> or <code>{ {10,20}, ... }</code></td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA stroke color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, fill?: integer, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.polygon(
+  { {100, 100}, {200, 80}, {180, 180} },
+  0xFFFFFFFF,
+  { fill = 0x3B82F655, thickness = 2 }
+)</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-polyline">
+      <div class="entry-name"><span>system.screen.canvas.polyline</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Open path through vertices (not closed). <code>fill</code> in options is ignored.</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>points</code></td><td><code>table</code></td><td>At least 2 vertices (same format as <code>polygon</code>)</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.polyline(
+  { {50, 400}, {200, 350}, {350, 420} },
+  0xF59E0BFF,
+  { thickness = 3 }
+)</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-quadratic_curve">
+      <div class="entry-name"><span>system.screen.canvas.quadratic_curve</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Quadratic Bézier: exactly three points — start, control, end. Stroke only (<code>fill</code> ignored).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>points</code></td><td><code>table</code></td><td>Three entries (same point format as <code>polygon</code>)</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.quadratic_curve(
+  { {100, 500}, {250, 300}, {400, 500} },
+  0xEC4899FF,
+  { thickness = 2 }
+)</pre>
+    </div>
+
+    <div class="entry" id="fn-canvas-bezier_curve">
+      <div class="entry-name"><span>system.screen.canvas.bezier_curve</span><span class="entry-kind fn">function</span></div>
+      <div class="entry-desc">Cubic Bézier: exactly four points — start, two controls, end. Stroke only (<code>fill</code> ignored).</div>
+      <table class="params-table">
+        <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+        <tr><td><code>points</code></td><td><code>table</code></td><td>Four entries</td></tr>
+        <tr><td><code>color</code></td><td><code>integer</code></td><td>RGBA color</td></tr>
+        <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ id?, thickness?, classes? }</code></td></tr>
+      </table>
+      <div class="example">Example</div>
+      <pre class="example-code">system.screen.canvas.bezier_curve(
+  { {80, 520}, {180, 380}, {320, 460}, {440, 520} },
+  0x14B8A6FF,
+  { thickness = 2 }
+)</pre>
+    </div>
+
     <div class="entry" id="fn-canvas-remove_by_id">
       <div class="entry-name"><span>system.screen.canvas.remove_by_id</span><span class="entry-kind fn">function</span></div>
       <div class="entry-desc">Remove a specific canvas element by its ID.</div>

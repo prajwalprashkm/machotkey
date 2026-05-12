@@ -1,5 +1,6 @@
 --[[
-  Color / input / fs: batched ops → timing one batch per callback (sum of ops / sum workload µs → action_ops_per_sec).
+  Color / input / fs: adaptive batches — as many ops per capture callback as fit in a
+  time budget = FRAME_BUDGET_FRACTION × (1/TARGET_FPS) second, capped by ADAPTIVE_MAX_OPS_PER_FRAME.
   OCR + OpenCV: one timed op per callback.
   M.action_label(phase) names the op for HUD/bench.
 ]]
@@ -36,12 +37,47 @@ local function set_stats(state, ops, total_us)
   state.workload_us_per_op = total_us / ops
 end
 
+local function frame_budget_us(config)
+  local fps = config.TARGET_FPS
+  if type(fps) ~= "number" or fps < 1 then
+    fps = 60
+  end
+  local frac = config.FRAME_BUDGET_FRACTION
+  if type(frac) ~= "number" or frac <= 0 or frac > 1 then
+    frac = 0.88
+  end
+  return math.max(100, math.floor(1000000 / fps * frac))
+end
+
+local function adaptive_ops_cap(config)
+  local m = config.ADAPTIVE_MAX_OPS_PER_FRAME
+  if type(m) ~= "number" or m < 1 then
+    m = 262144
+  end
+  return math.floor(m)
+end
+
+local function input_adaptive_stride(config)
+  local s = config.INPUT_ADAPTIVE_STRIDE
+  if type(s) ~= "number" or s < 1 then
+    s = 32
+  end
+  return math.floor(s)
+end
+
 local function color_fullframe(config, ctx, state)
-  local n = config.COLOR_SEARCHES_PER_FRAME
+  local budget = frame_budget_us(config)
+  local cap = adaptive_ops_cap(config)
   local rect = ctx.full_frame
   local t0 = system.get_time("us")
-  for i = 1, n do
-    local k = state.color_seed + i * 17
+  local n = 0
+  local seed = state.color_seed
+  while n < cap do
+    if n > 0 and system.get_time("us") - t0 >= budget then
+      break
+    end
+    n = n + 1
+    local k = seed + n * 17
     local r = k % 256
     local g = (k * 3 + 90) % 256
     local b = (k * 5 + 180) % 256
@@ -64,10 +100,16 @@ local function ocr_fullframe(fast, _config, state)
 end
 
 local function input_batch(config, state)
-  local n = config.INPUT_GETPOSITION_BATCH
-  n = math.max(1, math.floor(n))
+  local budget = frame_budget_us(config)
+  local cap = adaptive_ops_cap(config)
+  local stride = input_adaptive_stride(config)
   local t0 = system.get_time("us")
-  for _ = 1, n do
+  local n = 0
+  while n < cap do
+    if n > 0 and (n % stride == 0) and system.get_time("us") - t0 >= budget then
+      break
+    end
+    n = n + 1
     system.mouse.get_position()
   end
   local t1 = system.get_time("us")
@@ -100,9 +142,15 @@ end
 
 local function fs_batch(config, state)
   local path = config.FS_BENCH_PATH
-  local n = math.max(1, math.floor(config.FS_READS_PER_FRAME))
+  local budget = frame_budget_us(config)
+  local cap = adaptive_ops_cap(config)
   local t0 = system.get_time("us")
-  for _ = 1, n do
+  local n = 0
+  while n < cap do
+    if n > 0 and system.get_time("us") - t0 >= budget then
+      break
+    end
+    n = n + 1
     system.fs.read_all(path)
   end
   local t1 = system.get_time("us")

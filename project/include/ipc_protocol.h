@@ -61,8 +61,19 @@ enum class DrawCmdType : uint32_t {
     RECT,
     TEXT,
     LINE,
-    CLEAR
+    CLEAR,
+    ARC,
+    CIRCLE,
+    ELLIPSE,
+    POLYGON,
+    POLYLINE,
+    QUADRATIC_CURVE,
+    BEZIER_CURVE,
 };
+
+inline constexpr uint32_t kDrawCmdFlagCounterclockwise = 1u;
+/// Max extra payload (float x,y pairs) for polygon / curve commands over the IPC pipe.
+inline constexpr uint32_t kMaxCanvasPolyExtraBytes = 512u * 1024u;
 
 
 #pragma pack(push, 1) // Ensure no padding between fields for raw pipe writing
@@ -109,6 +120,10 @@ struct DrawCommand {
     uint32_t class_count=0;
     bool fill=false;
     uint32_t fill_color;
+    float angle_start = 0.f;
+    float angle_end = 0.f;
+    float rotation = 0.f;
+    uint32_t flags = 0;
     uint64_t data=0;
 
     inline bool has_class(const char* name) const {
@@ -118,6 +133,18 @@ struct DrawCommand {
         return false;
     }
 };
+
+inline bool draw_cmd_uses_point_payload(DrawCmdType t) {
+    switch (t) {
+        case DrawCmdType::POLYGON:
+        case DrawCmdType::POLYLINE:
+        case DrawCmdType::QUADRATIC_CURVE:
+        case DrawCmdType::BEZIER_CURVE:
+            return true;
+        default:
+            return false;
+    }
+}
 struct ScreenDim{
     double w;
     double h;
