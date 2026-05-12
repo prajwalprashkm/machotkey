@@ -23,8 +23,7 @@ jobs:
 
       - name: Build docs
         run: |
-          # Build your docs here (e.g., if using MkDocs, Sphinx, etc.)
-          echo "Building docs..."
+          cp -r docs/* build/
 
       - name: Delete old artifacts
         uses: gha-remove-artifacts@v2
