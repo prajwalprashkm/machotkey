@@ -64,7 +64,7 @@ set_target_properties(machotkey PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${PROJECT_ROOT}/project/resources/Info.plist"
     MACOSX_BUNDLE_ICON_FILE "machotkey.icns"
-    MACOSX_BUNDLE_BUNDLE_NAME "MacHotkey"
+    MACOSX_BUNDLE_BUNDLE_NAME "Machotkey"
     MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
     OUTPUT_NAME "Machotkey"

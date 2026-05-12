@@ -12,7 +12,7 @@
     <string>Machotkey</string>
     
     <key>CFBundleExecutable</key>
-    <string>machotkey</string>
+    <string>Machotkey</string>
     
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
@@ -42,13 +42,10 @@
     <true/>
     
     <key>NSScreenCaptureUsageDescription</key>
-    <string>MacHotkey needs screen capture access to record and analyze screen content for automation.</string>
+    <string>Machotkey needs screen capture access for macros that require it.</string>
     
     <key>NSAccessibilityUsageDescription</key>
-    <string>MacHotkey needs accessibility access to simulate keyboard and mouse input for automation.</string>
-    
-    <key>NSAppleEventsUsageDescription</key>
-    <string>MacHotkey needs to send Apple Events to control other applications.</string>
+    <string>Machotkey needs accessibility access to simulate keyboard and mouse input for macros that require it.</string>
     
     <key>LSArchitecturePriority</key>
     <array>
@@ -56,7 +53,7 @@
     </array>
     
     <key>LSApplicationCategoryType</key>
-    <string>public.app-category.utilities</string>
+    <string>public.app-category.developer-tools</string>
     
     <key>CSResourcesFileMapped</key>
     <true/>
@@ -65,6 +62,6 @@
     <string>NSApplication</string>
     
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2026 Machotkey. All rights reserved.</string>
+    <string>Copyright © 2026 Prajwal Prashanth. All rights reserved.</string>
 </dict>
 </plist>
