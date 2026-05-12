@@ -21,7 +21,7 @@ jobs:
           cp -r docs/* build/
 
       - name: Delete old artifacts
-        uses: gha-remove-artifacts@v2
+        uses: actions/gha-remove-artifacts@v2
         with:
           age: '0 seconds'  # Delete all previous artifacts
 
