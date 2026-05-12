@@ -61,7 +61,16 @@ constexpr double kHardMaxKeyboardTextCharsPerSec = 2000000.0;
 constexpr double kDefaultCpuThrottlePercent = 75.0;
 constexpr double kDefaultCpuKillPercent = 95.0;
 constexpr double kMinCpuTargetPercent = 5.0;
-constexpr double kMaxCpuTargetPercent = 800.0;
+
+/// Upper bound for CPU throttle/kill percentages: logical processor count × 100
+/// (same scale as multi-core aggregate usage, e.g. 8 cores → 800%).
+inline double max_cpu_target_percent() {
+    unsigned n = std::thread::hardware_concurrency();
+    if (n == 0) {
+        n = 1;
+    }
+    return static_cast<double>(n) * 100.0;
+}
 constexpr uint64_t kDefaultResidentRamLimitBytes = 4ULL * 1024 * 1024 * 1024;
 constexpr uint64_t kDefaultVirtualRamLimitBytes = 32ULL * 1024 * 1024 * 1024;
 constexpr uint64_t kMinResidentRamLimitBytes = 128ULL * 1024 * 1024;
@@ -1512,7 +1521,7 @@ inline const std::string escape_string(const std::string& str){
 
 double clamp_cpu_target_percent(double value) {
     if (!std::isfinite(value)) return kDefaultCpuThrottlePercent;
-    return std::max(kMinCpuTargetPercent, std::min(kMaxCpuTargetPercent, value));
+    return std::max(kMinCpuTargetPercent, std::min(max_cpu_target_percent(), value));
 }
 
 uint64_t clamp_resident_ram_limit_bytes(uint64_t value) {
@@ -3115,6 +3124,11 @@ int main(int argc, char* argv[]) {
         }
     });
     refresh_menu_runtime_state();
+
+    app.bind("get_max_cpu", [](const std::string& data)->std::string{
+        (void)data;
+        return std::to_string(max_cpu_target_percent());
+    });
 
     app.bind("run_script", [](const std::string& data)->std::string{
         (void)data;
