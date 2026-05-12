@@ -66,8 +66,8 @@ set_target_properties(machotkey PROPERTIES
     MACOSX_BUNDLE_ICON_FILE "machotkey.icns"
     MACOSX_BUNDLE_BUNDLE_NAME "MacHotkey"
     MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
-    MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
-    OUTPUT_NAME "machotkey"
+    MACOSX_BUNDLE_SHO2RT_VERSION_STRING "1.0"
+    OUTPUT_NAME "Machotkey"
 )
 
 set_target_properties(macro_runner PROPERTIES
