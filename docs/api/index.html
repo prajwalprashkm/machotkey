@@ -782,7 +782,7 @@ print("media time µs:", us)</pre>
 
     <div class="entry" id="fn-screen-begin_capture">
       <div class="entry-name"><span>system.screen.begin_capture</span><span class="entry-kind fn">function</span></div>
-      <div class="entry-desc">Start screen capture. Accepts optional <code>options</code> table and/or per-frame <code>callback</code> in either order.</div>
+      <div class="entry-desc">Start screen capture. Accepts optional <code>options</code> table and/or per-frame <code>callback</code> in either order. Callback mode screen capture only starts delivering frames after the macro execution stops (after the lua code ends; the macro will still be running. This fits the asynchronous model.) Note that the asynchronous model is highly recommended; the synchronous model consumes much higher cpu with little benefit.</div>
       <table class="params-table">
         <tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
         <tr><td><code>options</code> <span class="optional">(optional)</span></td><td><code>table</code></td><td><code>{ fps?: integer, region?: Rect, display_id?: integer }</code></td></tr>
@@ -793,16 +793,15 @@ print("media time µs:", us)</pre>
         <div class="overload">system.screen.begin_capture(options)</div>
         <div class="overload">system.screen.begin_capture(callback)</div>
         <div class="overload">system.screen.begin_capture(callback, options)</div>
-        <div class="overload">system.screen.begin_capture(options, callback)</div>
       </div>
       <div class="example">Example</div>
-      <pre class="example-code">system.screen.begin_capture({
+      <pre class="example-code">system.screen.begin_capture( function()
+  -- runs every new frame
+end, {
   fps = 60,
   display_id = system.screen.get_displays()[1].id,
   region = { x = 0, y = 0, w = 800, h = 600 },
-}, function()
-  -- runs every new frame
-end)</pre>
+})</pre>
     </div>
 
     <div class="entry" id="fn-screen-stop_capture">
