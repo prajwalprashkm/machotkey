@@ -1,6 +1,6 @@
 # Machotkey
 
-Machotkey is a very high performance native macOS macro scripting application: write macros in **Lua** (LuaJIT), automate keyboard and mouse, capture and analyze the screen with **OpenCV**, and drive the UI through embedded **WebKit** views with an optional **ImGui** overlay path.
+Machotkey is a very high performance native macOS macro scripting application: write macros in **Lua** (LuaJIT), automate keyboard and mouse, capture and analyze the screen with **OpenCV** and other pixel analyzation features, and drive the UI through embedded **WebKit** views with an optional **ImGui** (primitive) overlay path.
 
 The design splits privileges cleanly:
 
